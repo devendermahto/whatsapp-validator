@@ -30,6 +30,7 @@ def init_db():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS web_users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
             api_url TEXT,
             instance_name TEXT,
             api_key TEXT,
