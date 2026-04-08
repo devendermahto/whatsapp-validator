@@ -37,7 +37,7 @@ def login():
             else:
                 return render_template('login.html', error='Invalid credentials')
         else:
-            if username == 'admin' and password == 'admin123':
+            if username == 'devendermahto' and password == 'Mahto@Ertiga8585':
                 core.save_user_auth(username, password)
                 session['authenticated'] = True
                 session['username'] = username
