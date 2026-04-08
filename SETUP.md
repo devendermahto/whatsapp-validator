@@ -1,18 +1,23 @@
-# Evolution API Setup Guide
+# WhatsApp Validator Setup Guide
 
-## Option 1: Portainer (Recommended)
+This guide covers setting up both Evolution API and the WhatsApp Validator web app on Unraid using Portainer.
 
-### Step 1: Open Portainer
-- Go to `http://<your-unraid-ip>:9443`
-- Login with your credentials
+---
 
-### Step 2: Create Stack
-1. Click **Stacks** (left sidebar)
-2. Click **Add stack**
-3. Name: `evolution-api`
+## Prerequisites
 
-### Step 3: Paste Configuration
-In the editor, paste:
+- Unraid server with Portainer installed
+- Telegram Bot Token (get from @BotFather)
+
+---
+
+## Step 1: Deploy Everything (Single Stack)
+
+In Portainer:
+1. Go to **Stacks** → **Add stack**
+2. Name: `whatsapp-validator`
+3. Paste this configuration:
+
 ```yaml
 version: '3'
 services:
@@ -24,78 +29,96 @@ services:
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
-      - AUTHENTICATION_API_KEY=mypass123
+      - AUTHENTICATION_API_KEY=Mahto@Ertiga8585
     volumes:
       - evolution_instances:/evolution/instances
     restart: unless-stopped
 
+  whatsapp-validator:
+    build:
+      context: https://github.com/devendermahto/whatsapp-validator.git
+      dockerfile: Dockerfile
+    container_name: whatsapp-validator
+    ports:
+      - "5000:5000"
+    volumes:
+      - validator_data:/app
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0
+
 volumes:
   evolution_instances:
-    driver: local
+  validator_data:
 ```
 
-### Step 4: Deploy
-1. Click **Deploy the stack**
-2. Wait 1-2 minutes for container to start
-3. Check container in **Containers** tab
-
-### Step 5: Verify
-- Open `http://<your-unraid-ip>:8081` in browser
-- You should see Evolution API response
+4. Click **Deploy the stack**
+5. Wait 3-5 minutes for both containers to build and start
 
 ---
 
-## Option 2: Unraid Docker Template
+## Step 2: Verify Containers
 
-### Step 1: Open Docker Tab
-- Go to Unraid UI → **Docker** tab
-- Click **Add Container**
-
-### Step 2: Configure Container
-
-| Setting | Value |
-|---------|-------|
-| **Name** | `evolution-api` |
-| **Repository** | `atarrytech/evolution-api:latest` |
-| **Network Type** | `Bridge` |
-
-### Step 3: Port Settings
-Click **Add**:
-- Host Port: `8081`
-- Container Port: `8080`
-- Protocol: `TCP`
-
-### Step 4: Environment Variables
-Click **Add** three times:
-
-| Variable | Value |
-|----------|-------|
-| `SERVER_TYPE` | `http` |
-| `SERVER_PORT` | `8080` |
-| `AUTHENTICATION_API_KEY` | `mypass123` |
-
-### Step 5: Volume Settings
-Click **Add**:
-- Host Path: `/mnt/user/appdata/evolution-api`
-- Container Path: `/evolution/instances`
-
-### Step 6: Start Container
-- Click **Apply**
-- Wait for container to start
-- Check logs if needed
+Check in Portainer **Containers** tab:
+- `evolution-api` - should be running
+- `whatsapp-validator` - should be running
 
 ---
 
-## Step 6: Create Instance (After Setup)
+## Step 3: Access the Web App
 
-After container is running:
-1. Open `http://<unraid-ip>:8081` in browser
-2. Use POST request to create instance:
-   ```
-   POST http://<unraid-ip>:8081/instance/create
-   Body: {"instanceName": "mywhatsapp"}
-   ```
+1. Open browser: `http://<your-unraid-ip>:5000`
+2. Login with:
+   - **Username:** `devendermahto`
+   - **Password:** `Mahto@Ertiga8585`
+
+---
+
+## Step 4: Configure Evolution API
+
+In the web app:
+1. Enter your API details:
+   - **API URL:** `http://<your-unraid-ip>:8081`
+   - **Instance Name:** `mywhatsapp` (or whatever you create)
+   - **API Key:** `Mahto@Ertiga8585`
+2. Click **Save & Connect**
+3. Should show "Connected ✅"
+
+---
+
+## Step 5: Create WhatsApp Instance
+
+Option A - Via Evolution API Dashboard:
+1. Open `http://<your-unraid-ip>:8081` in browser
+2. Create instance with name `mywhatsapp`
 3. Scan QR code with WhatsApp
+
+Option B - Via API:
+```
+POST http://<your-unraid-ip>:8081/instance/create
+Body: {"instanceName": "mywhatsapp"}
+```
+
+---
+
+## Step 6: Start Validating Numbers
+
+1. Go to web app: `http://<your-unraid-ip>:5000`
+2. Login with your credentials
+3. Enter phone numbers in the text area
+4. Click **Start Validation**
+5. Watch real-time progress
+6. Download results when complete
+
+---
+
+## Service URLs
+
+| Service | URL |
+|---------|-----|
+| Web App | `http://<unraid-ip>:5000` |
+| Evolution API | `http://<unraid-ip>:8081` |
+| Portainer | `http://<unraid-ip>:9443` |
 
 ---
 
@@ -103,7 +126,15 @@ After container is running:
 
 | Problem | Solution |
 |---------|----------|
-| Port already in use | Change `8081` to another port (8082, 8083, etc.) |
-| Container won't start | Check logs in Portainer/Unraid |
-| Can't access from PC | Ensure firewall allows the port |
-| Instance not working | Make sure you scanned QR code |
+| Web app not loading | Check container logs in Portainer |
+| API not connected | Verify instance is created and QR scanned |
+| Port already in use | Change port in docker-compose (e.g., 8082:8080) |
+| Build fails | Check GitHub repo is public or build context is correct |
+
+---
+
+## Login Credentials
+
+- **Web App Username:** `devendermahto`
+- **Web App Password:** `Mahto@Ertiga8585`
+- **Telegram Bot:** Already configured in environment
