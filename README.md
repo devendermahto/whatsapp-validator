@@ -46,7 +46,7 @@ services:
 
   whatsapp-validator:
     build:
-      context: https://github.com/devendermahto/whatsapp-validator.git
+      context: https://github.com/devendermahto/whatsapp-validator.git#main
       dockerfile: Dockerfile
     container_name: whatsapp-validator
     ports:
