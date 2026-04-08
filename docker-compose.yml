@@ -18,6 +18,13 @@ services:
     container_name: whatsapp-validator
     command: >
       sh -c "pip install --no-cache-dir flask flask-socketio pyTelegramBotAPI python-dotenv requests &&
+             cd /tmp &&
+             curl -sL https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/app.py -o app.py &&
+             curl -sL https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/core.py -o core.py &&
+             curl -sL https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/templates/index.html -o templates/index.html &&
+             curl -sL https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/templates/login.html -o templates/login.html &&
+             curl -sL https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/database.py -o database.py &&
+             curl -sL https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/evolution_api.py -o evolution_api.py &&
              python app.py"
     ports:
       - "5050:5000"
@@ -27,7 +34,6 @@ services:
       - validator_data:/app
     working_dir: /app
     restart: unless-stopped
-    pull_policy: always
 
 volumes:
   evolution_instances:
