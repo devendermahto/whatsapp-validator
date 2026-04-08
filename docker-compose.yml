@@ -14,17 +14,20 @@ services:
     restart: unless-stopped
 
   whatsapp-validator:
-    build:
-      context: https://github.com/devendermahto/whatsapp-validator.git#main
-      dockerfile: Dockerfile
+    image: python:3.11-slim
     container_name: whatsapp-validator
+    command: >
+      sh -c "pip install --no-cache-dir flask flask-socketio pyTelegramBotAPI python-dotenv requests &&
+             python app.py"
     ports:
       - "5050:5000"
     environment:
       - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - validator_data:/app
+    working_dir: /app
     restart: unless-stopped
+    pull_policy: always
 
 volumes:
   evolution_instances:
