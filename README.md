@@ -29,7 +29,7 @@ services:
     image: atarrytech/evolution-api:latest
     container_name: evolution-api
     ports:
-      - "8081:8080"
+      - "8089:8080"
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
@@ -61,7 +61,7 @@ volumes:
 | Service | URL |
 |---------|-----|
 | Web App | `http://<unraid-ip>:5000` |
-| Evolution API | `http://<unraid-ip>:8081` |
+| Evolution API | `http://<unraid-ip>:8089` |
 
 ### Login
 
@@ -71,7 +71,7 @@ volumes:
 ### Configure
 
 In the web app:
-1. **API URL:** `http://<unraid-ip>:8081`
+1. **API URL:** `http://<unraid-ip>:8089`
 2. **Instance Name:** `mywhatsapp`
 3. **API Key:** `Mahto@Ertiga8585`
 4. Click **Save & Connect**
@@ -79,7 +79,7 @@ In the web app:
 ### Create WhatsApp Instance
 
 ```
-POST http://<unraid-ip>:8081/instance/create
+POST http://<unraid-ip>:8089/instance/create
 Body: {"instanceName": "mywhatsapp"}
 ```
 

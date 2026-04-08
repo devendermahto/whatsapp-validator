@@ -25,7 +25,7 @@ services:
     image: atarrytech/evolution-api:latest
     container_name: evolution-api
     ports:
-      - "8081:8080"
+      - "8089:8080"
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
@@ -78,7 +78,7 @@ Check in Portainer **Containers** tab:
 
 In the web app:
 1. Enter your API details:
-   - **API URL:** `http://<your-unraid-ip>:8081`
+   - **API URL:** `http://<your-unraid-ip>:8089`
    - **Instance Name:** `mywhatsapp` (or whatever you create)
    - **API Key:** `Mahto@Ertiga8585`
 2. Click **Save & Connect**
@@ -89,13 +89,13 @@ In the web app:
 ## Step 5: Create WhatsApp Instance
 
 Option A - Via Evolution API Dashboard:
-1. Open `http://<your-unraid-ip>:8081` in browser
+1. Open `http://<your-unraid-ip>:8089` in browser
 2. Create instance with name `mywhatsapp`
 3. Scan QR code with WhatsApp
 
 Option B - Via API:
 ```
-POST http://<your-unraid-ip>:8081/instance/create
+POST http://<your-unraid-ip>:8089/instance/create
 Body: {"instanceName": "mywhatsapp"}
 ```
 
@@ -117,7 +117,7 @@ Body: {"instanceName": "mywhatsapp"}
 | Service | URL |
 |---------|-----|
 | Web App | `http://<unraid-ip>:5000` |
-| Evolution API | `http://<unraid-ip>:8081` |
+| Evolution API | `http://<unraid-ip>:8089` |
 | Portainer | `http://<unraid-ip>:9443` |
 
 ---
