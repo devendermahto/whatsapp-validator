@@ -1,14 +1,17 @@
 # WhatsApp Validator Bot
 
-A self-hosted WhatsApp number validator using Evolution API. Includes both a Telegram bot and a web interface.
+A self-hosted WhatsApp number validator using Evolution API. Features both Telegram bot and web interface with authentication, job history, and real-time progress.
 
 ## Features
 
-- **Telegram Bot** - Validate numbers via Telegram commands
 - **Web Interface** - Visual UI with real-time progress tracking
+- **Job History** - View all previous validation jobs with detailed results
+- **Background Processing** - Jobs run in background, no page refresh needed
+- **Authentication** - Secure login for web interface
+- **Telegram Bot** - Validate numbers via Telegram commands
 - **Batch Processing** - Process numbers in batches of 50
-- **Anti-Ban Protection** - Randomized delays (2.5-5.5s) between checks, 3-min cooldown between batches
-- **SQLite Database** - Persistent storage for API credentials
+- **Anti-Ban Protection** - Randomized delays (2.5-5.5s) between checks, 3-min cooldown
+- **SQLite Database** - Persistent storage for credentials and job history
 - **Self-Hosted** - Runs on your own Evolution API server
 
 ## Prerequisites
@@ -20,90 +23,100 @@ A self-hosted WhatsApp number validator using Evolution API. Includes both a Tel
 ## Installation
 
 ```bash
-git clone <your-repo-url>
-cd WHATSAPP_CHECKER
+git clone https://github.com/devendermahto/whatsapp-validator.git
+cd whatsapp-validator
 
-# Create virtual environment (optional but recommended)
-python -m venv venv
-# Windows: venv\Scripts\activate
-# Linux/Mac: source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
-## Configuration
-
-1. Copy `.env.example` to `.env` (if exists) or create one:
-```env
-BOT_TOKEN=your_telegram_bot_token_here
-```
-
-2. For web interface, open http://localhost:5000 and enter your Evolution API credentials:
-   - **API URL**: `http://your-unraid-ip:8080`
-   - **Instance Name**: Your Evolution API instance name
-   - **API Key**: Your Evolution API key
-
 ## Usage
 
-### Web Interface (Recommended)
+### Web Interface
 ```bash
 python app.py
 ```
 Then open http://localhost:5000
+
+**First Login:**
+- Username: `admin`
+- Password: `admin123`
+- (You'll be prompted to change on first login)
 
 ### Telegram Bot
 ```bash
 python main.py
 ```
 
-### Telegram Commands
+## Docker Deployment
 
-1. Send `/start` to your bot
-2. Click **🔗 Connect API**
-3. Enter credentials: `URL, InstanceName, APIKey`
-   - Example: `http://192.168.1.100:8080, myinstance, abc123xyz`
-4. Click **📲 Start Checker**
-5. Send phone numbers (any format - text, comma-separated, or one per line)
+In Portainer, create a stack with:
+
+```yaml
+version: '3'
+services:
+  evolution-api:
+    image: atarrytech/evolution-api:latest
+    container_name: evolution-api
+    ports:
+      - "8081:8080"
+    environment:
+      - SERVER_TYPE=http
+      - SERVER_PORT=8080
+      - AUTHENTICATION_API_KEY=your_api_key
+    volumes:
+      - evolution_instances:/evolution/instances
+    restart: unless-stopped
+
+  whatsapp-validator:
+    build: .
+    container_name: whatsapp-validator
+    ports:
+      - "5000:5000"
+    volumes:
+      - validator_data:/app
+    restart: unless-stopped
+    environment:
+      - BOT_TOKEN=your_telegram_token
+
+volumes:
+  evolution_instances:
+  validator_data:
+```
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Web UI (requires login) |
+| `/login` | GET/POST | Authentication |
+| `/api/settings` | GET/POST | API credentials & job list |
+| `/api/jobs` | GET | All jobs |
+| `/api/job/<id>` | Get specific job |
+| `/api/validate` | POST | Start validation |
+| `/api/download/<id>` | GET | Download results |
+
+## Anti-Ban Measures
+
+- Random delays: 2.5-5.5 seconds between each number check
+- Batch cooldown: 180 seconds between batches of 50
+- Max 2 parallel workers
 
 ## Project Structure
 
 ```
-WHATSAPP_CHECKER/
-├── .env                 # BOT_TOKEN configuration
+whatsapp-validator/
 ├── app.py              # Flask web server
-├── core.py             # Shared validation logic
-├── database.py         # SQLite database functions
-├── evolution_api.py    # Evolution API wrapper
+├── core.py             # Core logic + database
 ├── main.py             # Telegram bot
-├── requirements.txt    # Python dependencies
-├── templates/
-│   └── index.html      # Web UI
-└── whatsapp_checker.db # SQLite database (auto-created)
+├── database.py         # SQLite functions
+├── evolution_api.py   # Evolution API wrapper
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+└── templates/
+    ├── index.html      # Main UI
+    └── login.html      # Login page
 ```
-
-## Environment Variables
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `BOT_TOKEN` | Telegram Bot API Token | For Telegram bot only |
-
-## API Endpoints (Web Interface)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Web UI |
-| `/api/settings` | GET/POST | Get/Save API credentials |
-| `/api/check-connection` | GET | Test API connection |
-| `/api/validate` | POST | Start validation |
-| `/api/download/<task_id>` | GET | Download results |
-
-## Anti-Ban Measures
-
-- **Random delays**: 2.5-5.5 seconds between each number check
-- **Batch cooldown**: 180 seconds (3 minutes) between batches of 50
-- **Concurrency limit**: Maximum 2 parallel workers
-- **Connection check**: Verifies API is reachable before processing
 
 ## License
 

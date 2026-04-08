@@ -3,6 +3,7 @@ import time
 import random
 import sqlite3
 import os
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
@@ -32,7 +33,24 @@ def init_db():
             api_url TEXT,
             instance_name TEXT,
             api_key TEXT,
+            password TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS jobs (
+            id TEXT PRIMARY KEY,
+            status TEXT DEFAULT 'pending',
+            total_numbers INTEGER DEFAULT 0,
+            valid_count INTEGER DEFAULT 0,
+            invalid_count INTEGER DEFAULT 0,
+            error_count INTEGER DEFAULT 0,
+            processed_count INTEGER DEFAULT 0,
+            valid_numbers TEXT,
+            invalid_numbers TEXT,
+            error_numbers TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP
         )
     """)
     conn.commit()
@@ -57,6 +75,124 @@ def save_api_credentials(api_url, instance_name, api_key, user_id=1):
         INSERT OR REPLACE INTO web_users (id, api_url, instance_name, api_key)
         VALUES (?, ?, ?, ?)
     """, (user_id, api_url, instance_name, api_key))
+    conn.commit()
+    conn.close()
+
+
+def save_user_auth(username, password):
+    import hashlib
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT OR REPLACE INTO web_users (id, username, password)
+        VALUES (1, ?, ?)
+    """, (username, hashed))
+    conn.commit()
+    conn.close()
+
+
+def verify_user(username, password):
+    import hashlib
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM web_users WHERE id = 1 AND username = ? AND password = ?", (username, hashed))
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
+
+
+def get_jobs(limit=50):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, status, total_numbers, valid_count, invalid_count, error_count, 
+               processed_count, created_at, completed_at
+        FROM jobs 
+        ORDER BY created_at DESC 
+        LIMIT ?
+    """, (limit,))
+    rows = cursor.fetchall()
+    conn.close()
+    jobs = []
+    for row in rows:
+        jobs.append({
+            'id': row[0],
+            'status': row[1],
+            'total_numbers': row[2],
+            'valid_count': row[3],
+            'invalid_count': row[4],
+            'error_count': row[5],
+            'processed_count': row[6],
+            'created_at': row[7],
+            'completed_at': row[8]
+        })
+    return jobs
+
+
+def get_job(job_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, status, total_numbers, valid_count, invalid_count, error_count,
+               processed_count, valid_numbers, invalid_numbers, error_numbers,
+               created_at, completed_at
+        FROM jobs WHERE id = ?
+    """, (job_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {
+            'id': row[0],
+            'status': row[1],
+            'total_numbers': row[2],
+            'valid_count': row[3],
+            'invalid_count': row[4],
+            'error_count': row[5],
+            'processed_count': row[6],
+            'valid_numbers': row[7].split(',') if row[7] else [],
+            'invalid_numbers': row[8].split(',') if row[8] else [],
+            'error_numbers': row[9].split(',') if row[9] else [],
+            'created_at': row[10],
+            'completed_at': row[11]
+        }
+    return None
+
+
+def create_job(job_id, total):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO jobs (id, status, total_numbers, processed_count)
+        VALUES (?, 'processing', ?, 0)
+    """, (job_id, total))
+    conn.commit()
+    conn.close()
+
+
+def update_job_progress(job_id, valid, invalid, error):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE jobs SET valid_count = ?, invalid_count = ?, error_count = ? WHERE id = ?
+    """, (valid, invalid, error, job_id))
+    conn.commit()
+    conn.close()
+
+
+def complete_job(job_id, valid_numbers, invalid_numbers, error_numbers):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE jobs SET 
+            status = 'completed',
+            valid_numbers = ?,
+            invalid_numbers = ?,
+            error_numbers = ?,
+            completed_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+    """, (','.join(valid_numbers), ','.join(invalid_numbers), ','.join(error_numbers), job_id))
     conn.commit()
     conn.close()
 
@@ -99,7 +235,7 @@ def check_connection(api_url, instance_name, api_key):
         return False
 
 
-def process_numbers(numbers, api_url, instance_name, api_key, progress_callback=None):
+def process_numbers(numbers, api_url, instance_name, api_key, progress_callback=None, job_id=None):
     results = {'valid': [], 'invalid': [], 'error': []}
     
     numbers = list(set(numbers))
@@ -116,11 +252,17 @@ def process_numbers(numbers, api_url, instance_name, api_key, progress_callback=
                 if progress_callback:
                     progress_callback(result)
                 
+                if job_id:
+                    update_job_progress(job_id, len(results['valid']), len(results['invalid']), len(results['error']))
+                
                 time.sleep(random.uniform(2.5, 5.5))
         
         if batch_idx < len(batches) - 1:
             time.sleep(180)
             if progress_callback:
                 progress_callback({'type': 'batch_complete', 'batch': batch_idx + 1, 'total': len(batches)})
+    
+    if job_id:
+        complete_job(job_id, results['valid'], results['invalid'], results['error'])
     
     return results

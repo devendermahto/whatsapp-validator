@@ -1,23 +1,59 @@
 import os
 import re
-from flask import Flask, render_template, request, jsonify, send_file
+import uuid
+from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'whatsapp-validator-secret-key'
+app.config['SECRET_KEY'] = 'whatsapp-validator-secret-key-change-in-production'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 import core
 core.init_db()
 
 active_tasks = {}
-task_results = {}
 
 
 @app.route('/')
 def index():
+    if not session.get('authenticated'):
+        return redirect(url_for('login'))
     return render_template('index.html')
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        creds = core.get_api_credentials()
+        if creds and creds.get('username'):
+            if core.verify_user(username, password):
+                session['authenticated'] = True
+                session['username'] = username
+                return redirect(url_for('index'))
+            else:
+                return render_template('login.html', error='Invalid credentials')
+        else:
+            if username == 'admin' and password == 'admin123':
+                core.save_user_auth(username, password)
+                session['authenticated'] = True
+                session['username'] = username
+                return redirect(url_for('index'))
+            return render_template('login.html', error='Setup your account first')
+    
+    creds = core.get_api_credentials()
+    if creds and creds.get('username'):
+        return render_template('login.html')
+    return render_template('login.html', setup=True)
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 
 @app.route('/api/settings', methods=['GET', 'POST'])
@@ -27,6 +63,9 @@ def settings():
         api_url = data.get('api_url', '').strip()
         instance_name = data.get('instance_name', '').strip()
         api_key = data.get('api_key', '').strip()
+        
+        if data.get('username') and data.get('password'):
+            core.save_user_auth(data['username'], data['password'])
         
         if not api_url or not instance_name or not api_key:
             return jsonify({'success': False, 'error': 'All fields are required'})
@@ -40,7 +79,22 @@ def settings():
             return jsonify({'success': False, 'error': 'Could not connect to API. Check URL and credentials.'})
     
     creds = core.get_api_credentials()
-    return jsonify({'credentials': creds})
+    jobs = core.get_jobs(20)
+    return jsonify({'credentials': creds, 'jobs': jobs})
+
+
+@app.route('/api/jobs')
+def get_all_jobs():
+    jobs = core.get_jobs(50)
+    return jsonify({'jobs': jobs})
+
+
+@app.route('/api/job/<job_id>')
+def get_job_details(job_id):
+    job = core.get_job(job_id)
+    if job:
+        return jsonify({'job': job})
+    return jsonify({'error': 'Job not found'}), 404
 
 
 @app.route('/api/check-connection')
@@ -63,77 +117,76 @@ def validate():
         return jsonify({'success': False, 'error': 'No valid numbers found (10-15 digits)'})
     
     numbers = list(set(numbers))
-    task_id = str(threading.get_ident())
-    active_tasks[task_id] = True
-    task_results[task_id] = {'valid': [], 'invalid': [], 'error': [], 'total': len(numbers), 'processed': 0}
+    job_id = str(uuid.uuid4())[:8]
+    
+    core.create_job(job_id, len(numbers))
+    active_tasks[job_id] = True
     
     def progress_callback(result):
         if result.get('type') == 'batch_complete':
-            socketio.emit('batch_complete', result, room=request.sid)
+            socketio.emit('batch_complete', result)
             return
         
-        task_results[task_id][result['status']].append(result['number'])
-        task_results[task_id]['processed'] += 1
         socketio.emit('progress', {
-            'processed': task_results[task_id]['processed'],
-            'total': task_results[task_id]['total'],
-            'current': result
-        }, room=request.sid)
+            'job_id': job_id,
+            'status': result.get('status'),
+            'number': result.get('number'),
+            'emoji': result.get('emoji')
+        })
     
     def run_validation():
         creds = core.get_api_credentials()
         try:
-            results = core.process_numbers(
+            core.process_numbers(
                 numbers, 
                 creds['api_url'], 
                 creds['instance_name'], 
                 creds['api_key'],
-                progress_callback
+                progress_callback,
+                job_id
             )
-            task_results[task_id].update(results)
         except Exception as e:
-            task_results[task_id]['error_msg'] = str(e)
+            print(f"Validation error: {e}")
         finally:
-            active_tasks[task_id] = False
-            socketio.emit('complete', task_results[task_id], room=request.sid)
+            active_tasks[job_id] = False
+            socketio.emit('complete', {'job_id': job_id})
     
     thread = threading.Thread(target=run_validation)
     thread.start()
     
-    return jsonify({'success': True, 'task_id': task_id, 'total': len(numbers)})
+    return jsonify({'success': True, 'job_id': job_id, 'total': len(numbers)})
 
 
-@app.route('/api/results/<task_id>')
-def get_results(task_id):
-    if task_id in task_results:
-        return jsonify({'results': task_results[task_id]})
-    return jsonify({'error': 'Task not found'})
-
-
-@app.route('/api/download/<task_id>')
-def download_results(task_id):
-    if task_id not in task_results:
-        return jsonify({'error': 'Task not found'})
+@app.route('/api/download/<job_id>')
+def download_results(job_id):
+    job = core.get_job(job_id)
+    if not job:
+        return jsonify({'error': 'Job not found'})
     
-    results = task_results[task_id]
     content = []
-    content.append("=== WhatsApp Validator Results ===\n")
-    content.append(f"Total: {results.get('total', 0)}\n")
-    content.append(f"Valid: {len(results.get('valid', []))}\n")
-    content.append(f"Invalid: {len(results.get('invalid', []))}\n")
-    content.append(f"Error: {len(results.get('error', []))}\n")
-    content.append("\n=== Invalid Numbers ===\n")
-    content.extend(results.get('invalid', []))
-    content.append("\n=== Error Numbers ===\n")
-    content.extend(results.get('error', []))
+    content.append("=== WhatsApp Validator Results ===")
+    content.append(f"Job ID: {job_id}")
+    content.append(f"Total: {job['total_numbers']}")
+    content.append(f"Valid: {job['valid_count']}")
+    content.append(f"Invalid: {job['invalid_count']}")
+    content.append(f"Error: {job['error_count']}")
+    content.append("")
+    content.append("=== Valid Numbers ===")
+    content.extend(job['valid_numbers'])
+    content.append("")
+    content.append("=== Invalid Numbers ===")
+    content.extend(job['invalid_numbers'])
+    content.append("")
+    content.append("=== Error Numbers ===")
+    content.extend(job['error_numbers'])
     
-    filename = f"results_{task_id}.txt"
+    filename = f"results_{job_id}.txt"
     filepath = os.path.join(os.path.dirname(__file__), filename)
     with open(filepath, 'w') as f:
         f.write('\n'.join(content))
     
-    return send_file(filepath, as_attachment=True, download_name=f"whatsapp_results_{task_id}.txt")
+    return send_file(filepath, as_attachment=True, download_name=f"whatsapp_results_{job_id}.txt")
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, port=5000)
+    socketio.run(app, debug=True, port=5000, host='0.0.0.0')

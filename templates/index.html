@@ -7,130 +7,228 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #fff; }
-        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        h1 { text-align: center; margin-bottom: 30px; color: #00d9ff; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #fff; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h1 { color: #00d9ff; }
+        .logout-btn { padding: 8px 16px; background: #ff4444; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
+        
         .card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; margin-bottom: 20px; backdrop-filter: blur(10px); }
-        .card h2 { margin-bottom: 15px; color: #00d9ff; }
+        .card h2 { margin-bottom: 15px; color: #00d9ff; font-size: 18px; }
+        
         .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; color: #aaa; }
+        label { display: block; margin-bottom: 5px; color: #aaa; font-size: 14px; }
         input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #0f0f23; color: #fff; font-size: 14px; }
         input:focus, textarea:focus { outline: none; border-color: #00d9ff; }
-        button { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s; }
+        
+        button { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; }
         .btn-primary { background: #00d9ff; color: #1a1a2e; }
-        .btn-primary:hover { background: #00b8d4; transform: translateY(-2px); }
+        .btn-primary:hover { background: #00b8d4; }
         .btn-success { background: #00ff88; color: #1a1a2e; }
         .btn-success:hover { background: #00cc6a; }
         .btn-download { background: #ff6b6b; color: #fff; }
-        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        
+        .status-row { display: flex; align-items: center; gap: 10px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; }
         .status-connected { background: #00ff88; box-shadow: 0 0 10px #00ff88; }
         .status-disconnected { background: #ff4444; }
-        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; }
+        .status-processing { background: #ffaa00; animation: pulse 1s infinite; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        .progress-container { display: none; }
+        .progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #00d9ff, #00ff88); width: 0%; transition: width 0.3s; }
+        .progress-text { text-align: center; margin-top: 10px; color: #aaa; font-size: 14px; }
+        
+        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
         .stat-box { text-align: center; padding: 20px; border-radius: 10px; background: rgba(255,255,255,0.05); }
-        .stat-box .count { font-size: 32px; font-weight: bold; }
+        .stat-box .count { font-size: 28px; font-weight: bold; }
+        .stat-box.total { border: 2px solid #00d9ff; }
+        .stat-box.total .count { color: #00d9ff; }
         .stat-box.valid { border: 2px solid #00ff88; }
         .stat-box.valid .count { color: #00ff88; }
         .stat-box.invalid { border: 2px solid #ff4444; }
         .stat-box.invalid .count { color: #ff4444; }
         .stat-box.error { border: 2px solid #ffaa00; }
         .stat-box.error .count { color: #ffaa00; }
-        .progress-container { margin-top: 20px; display: none; }
-        .progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #00d9ff, #00ff88); width: 0%; transition: width 0.3s; }
-        .progress-text { text-align: center; margin-top: 10px; color: #aaa; }
-        .results-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .results-table th, .results-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
-        .results-table th { background: rgba(255,255,255,0.1); color: #00d9ff; }
-        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-        .badge-valid { background: #00ff88; color: #1a1a2e; }
-        .badge-invalid { background: #ff4444; color: #fff; }
-        .badge-error { background: #ffaa00; color: #1a1a2e; }
-        .hidden { display: none; }
+        
+        .history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
+        .history-table th { background: rgba(255,255,255,0.1); color: #00d9ff; }
+        .history-table tr:hover { background: rgba(255,255,255,0.05); }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; }
+        .badge-completed { background: #00ff88; color: #1a1a2e; }
+        .badge-processing { background: #ffaa00; color: #1a1a2e; }
+        .badge-pending { background: #666; color: #fff; }
+        
+        .job-details { display: none; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; }
+        .job-details.active { display: block; }
+        .numbers-list { max-height: 200px; overflow-y: auto; font-size: 12px; color: #aaa; }
+        .numbers-list div { padding: 4px 0; border-bottom: 1px solid #222; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📱 WhatsApp Validator</h1>
+        <div class="header">
+            <h1>📱 WhatsApp Validator</h1>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>🔗 API Configuration</h2>
+                <div class="form-group">
+                    <label>API URL</label>
+                    <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8081">
+                </div>
+                <div class="form-group">
+                    <label>Instance Name</label>
+                    <input type="text" id="instanceName" placeholder="myinstance">
+                </div>
+                <div class="form-group">
+                    <label>API Key</label>
+                    <input type="text" id="apiKey" placeholder="Your API key">
+                </div>
+                <button class="btn-primary" onclick="saveSettings()">Save & Connect</button>
+                <div class="status-row" style="margin-top: 15px;">
+                    <span class="status-dot status-disconnected" id="statusDot"></span>
+                    <span id="statusText">Not connected</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>📲 Validate Numbers</h2>
+                <div class="form-group">
+                    <label>Enter phone numbers (any format)</label>
+                    <textarea id="phoneInput" rows="5" placeholder="1234567890&#10;9876543210&#10;Or paste text with numbers..."></textarea>
+                </div>
+                <button class="btn-success" onclick="startValidation()">Start Validation</button>
+                
+                <div class="progress-container" id="progressCard">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">Processing...</div>
+                </div>
+                
+                <div id="currentJobStats" style="display: none; margin-top: 15px;">
+                    <div class="stats" style="grid-template-columns: repeat(3, 1fr);">
+                        <div class="stat-box valid"><div class="count" id="currValid">0</div><div>Valid</div></div>
+                        <div class="stat-box invalid"><div class="count" id="currInvalid">0</div><div>Invalid</div></div>
+                        <div class="stat-box error"><div class="count" id="currError">0</div><div>Error</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <div class="card">
-            <h2>🔗 API Configuration</h2>
-            <div class="form-group">
-                <label>API URL (e.g., http://192.168.1.100:8080)</label>
-                <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8080">
-            </div>
-            <div class="form-group">
-                <label>Instance Name</label>
-                <input type="text" id="instanceName" placeholder="myinstance">
-            </div>
-            <div class="form-group">
-                <label>API Key</label>
-                <input type="text" id="apiKey" placeholder="Your API key">
-            </div>
-            <button class="btn-primary" onclick="saveSettings()">Save & Connect</button>
-            <span id="connectionStatus" style="margin-left: 15px;">
-                <span class="status-indicator status-disconnected"></span>
-                <span id="statusText">Not connected</span>
-            </span>
+            <h2>📋 Job History</h2>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Job ID</th>
+                        <th>Total</th>
+                        <th>Valid</th>
+                        <th>Invalid</th>
+                        <th>Error</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="jobsTable">
+                    <tr><td colspan="8" style="text-align: center; color: #666;">Loading...</td></tr>
+                </tbody>
+            </table>
         </div>
-
-        <div class="card">
-            <h2>📲 Validate Numbers</h2>
-            <div class="form-group">
-                <label>Enter phone numbers (one per line, or comma/space separated, or in text)</label>
-                <textarea id="phoneInput" rows="8" placeholder="1234567890&#10;9876543210&#10;5551234567&#10;Or paste any text containing numbers..."></textarea>
-            </div>
-            <button class="btn-success" onclick="startValidation()">Start Validation</button>
-        </div>
-
-        <div class="card progress-container" id="progressCard">
-            <h2>⏳ Processing</h2>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
-            </div>
-            <div class="progress-text" id="progressText">0 / 0 numbers processed</div>
-        </div>
-
-        <div class="card hidden" id="resultsCard">
-            <h2>📊 Results</h2>
+        
+        <div class="card job-details" id="jobDetails">
+            <h2>📊 Job Details: <span id="detailJobId"></span></h2>
             <div class="stats">
-                <div class="stat-box valid">
-                    <div class="count" id="validCount">0</div>
-                    <div>Valid ✅</div>
+                <div class="stat-box total"><div class="count" id="detailTotal">0</div><div>Total</div></div>
+                <div class="stat-box valid"><div class="count" id="detailValid">0</div><div>Valid</div></div>
+                <div class="stat-box invalid"><div class="count" id="detailInvalid">0</div><div>Invalid</div></div>
+                <div class="stat-box error"><div class="count" id="detailError">0</div><div>Error</div></div>
+            </div>
+            <button class="btn-download" style="margin-top: 15px;" onclick="downloadJobResults()">📥 Download Results</button>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px;">
+                <div>
+                    <h4 style="color: #00ff88; margin-bottom: 10px;">Valid Numbers</h4>
+                    <div class="numbers-list" id="validNumbers"></div>
                 </div>
-                <div class="stat-box invalid">
-                    <div class="count" id="invalidCount">0</div>
-                    <div>Invalid ⛔️</div>
+                <div>
+                    <h4 style="color: #ff4444; margin-bottom: 10px;">Invalid Numbers</h4>
+                    <div class="numbers-list" id="invalidNumbers"></div>
                 </div>
-                <div class="stat-box error">
-                    <div class="count" id="errorCount">0</div>
-                    <div>Error ⏳</div>
+                <div>
+                    <h4 style="color: #ffaa00; margin-bottom: 10px;">Error Numbers</h4>
+                    <div class="numbers-list" id="errorNumbers"></div>
                 </div>
             </div>
-            <button class="btn-download" style="margin-top: 20px;" onclick="downloadResults()">📥 Download Results</button>
         </div>
     </div>
 
     <script>
         let socket;
-        let currentTaskId = null;
-
+        let currentJobId = null;
+        
         function initSocket() {
             socket = io();
             socket.on('progress', (data) => {
-                const percent = (data.processed / data.total) * 100;
-                document.getElementById('progressFill').style.width = percent + '%';
-                document.getElementById('progressText').textContent = `${data.processed} / ${data.total} numbers processed`;
+                if (currentJobId && data.job_id === currentJobId) {
+                    const total = parseInt(document.getElementById('progressText').dataset.total || 0);
+                    const processed = total;
+                    const percent = (processed / total) * 100;
+                    document.getElementById('progressFill').style.width = percent + '%';
+                    document.getElementById('progressText').textContent = `${data.number} - ${data.status}`;
+                    
+                    if (data.status === 'valid') document.getElementById('currValid').textContent = parseInt(document.getElementById('currValid').textContent) + 1;
+                    if (data.status === 'invalid') document.getElementById('currInvalid').textContent = parseInt(document.getElementById('currInvalid').textContent) + 1;
+                    if (data.status === 'error') document.getElementById('currError').textContent = parseInt(document.getElementById('currError').textContent) + 1;
+                }
+            });
+            socket.on('complete', (data) => {
+                if (currentJobId && data.job_id === currentJobId) {
+                    document.getElementById('progressText').textContent = 'Completed!';
+                    loadJobs();
+                }
             });
             socket.on('batch_complete', (data) => {
-                document.getElementById('progressText').textContent += ` (Batch ${data.batch}/${data.total} complete - resting)`;
+                document.getElementById('progressText').textContent += ` (Batch ${data.batch}/${data.total} resting...)`;
             });
-            socket.on('complete', (results) => {
-                document.getElementById('progressCard').style.display = 'none';
-                document.getElementById('resultsCard').classList.remove('hidden');
-                document.getElementById('validCount').textContent = results.valid.length;
-                document.getElementById('invalidCount').textContent = results.invalid.length;
-                document.getElementById('errorCount').textContent = results.error.length;
-            });
+        }
+
+        async function loadSettings() {
+            const res = await fetch('/api/settings');
+            const data = await res.json();
+            if (data.credentials) {
+                if (data.credentials.api_url) {
+                    document.getElementById('apiUrl').value = data.credentials.api_url;
+                    document.getElementById('instanceName').value = data.credentials.instance_name;
+                    document.getElementById('apiKey').value = data.credentials.api_key;
+                }
+            }
+            checkConnection();
+            loadJobs();
+        }
+
+        async function checkConnection() {
+            const res = await fetch('/api/check-connection');
+            const data = await res.json();
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            if (data.connected) {
+                dot.className = 'status-dot status-connected';
+                text.textContent = 'Connected ✅';
+            } else {
+                dot.className = 'status-dot status-disconnected';
+                text.textContent = 'Disconnected ⛔️';
+            }
         }
 
         async function saveSettings() {
@@ -144,43 +242,35 @@
                 body: JSON.stringify({api_url: apiUrl, instance_name: instanceName, api_key: apiKey})
             });
             const data = await res.json();
-            
-            const statusEl = document.getElementById('connectionStatus');
-            if (data.success) {
-                statusEl.innerHTML = '<span class="status-indicator status-connected"></span><span>Connected ✅</span>';
-            } else {
-                alert('Error: ' + data.error);
-            }
+            if (data.success) checkConnection();
+            else alert('Error: ' + data.error);
         }
 
-        async function loadSettings() {
-            const res = await fetch('/api/settings');
+        async function loadJobs() {
+            const res = await fetch('/api/jobs');
             const data = await res.json();
-            if (data.credentials && data.credentials.api_url) {
-                document.getElementById('apiUrl').value = data.credentials.api_url;
-                document.getElementById('instanceName').value = data.credentials.instance_name;
-                document.getElementById('apiKey').value = data.credentials.api_key;
+            const tbody = document.getElementById('jobsTable');
+            if (data.jobs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #666;">No jobs yet</td></tr>';
+                return;
             }
-            checkConnection();
-        }
-
-        async function checkConnection() {
-            const res = await fetch('/api/check-connection');
-            const data = await res.json();
-            const statusEl = document.getElementById('connectionStatus');
-            if (data.connected) {
-                statusEl.innerHTML = '<span class="status-indicator status-connected"></span><span>Connected ✅</span>';
-            } else {
-                statusEl.innerHTML = '<span class="status-indicator status-disconnected"></span><span>Disconnected ⛔️</span>';
-            }
+            tbody.innerHTML = data.jobs.map(job => `
+                <tr>
+                    <td><code>${job.id}</code></td>
+                    <td>${job.total_numbers}</td>
+                    <td style="color: #00ff88">${job.valid_count}</td>
+                    <td style="color: #ff4444">${job.invalid_count}</td>
+                    <td style="color: #ffaa00">${job.error_count}</td>
+                    <td><span class="badge badge-${job.status}">${job.status}</span></td>
+                    <td>${new Date(job.created_at).toLocaleDateString()}</td>
+                    <td><button onclick="viewJob('${job.id}')">View</button></td>
+                </tr>
+            `).join('');
         }
 
         async function startValidation() {
             const text = document.getElementById('phoneInput').value;
-            if (!text.trim()) {
-                alert('Please enter some phone numbers');
-                return;
-            }
+            if (!text.trim()) return alert('Enter phone numbers');
 
             const res = await fetch('/api/validate', {
                 method: 'POST',
@@ -188,23 +278,45 @@
                 body: JSON.stringify({text: text})
             });
             const data = await res.json();
-            
             if (data.success) {
-                currentTaskId = data.task_id;
+                currentJobId = data.job_id;
                 document.getElementById('progressCard').style.display = 'block';
                 document.getElementById('progressFill').style.width = '0%';
                 document.getElementById('progressText').textContent = `Processing ${data.total} numbers...`;
-                document.getElementById('resultsCard').classList.add('hidden');
-            } else {
-                alert('Error: ' + data.error);
+                document.getElementById('progressText').dataset.total = data.total;
+                document.getElementById('currentJobStats').style.display = 'block';
+                document.getElementById('currValid').textContent = '0';
+                document.getElementById('currInvalid').textContent = '0';
+                document.getElementById('currError').textContent = '0';
             }
         }
 
-        async function downloadResults() {
-            if (currentTaskId) {
-                window.location.href = '/api/download/' + currentTaskId;
-            }
+        async function viewJob(jobId) {
+            const res = await fetch('/api/job/' + jobId);
+            const data = await res.json();
+            if (!data.job) return alert('Job not found');
+            
+            const job = data.job;
+            document.getElementById('detailJobId').textContent = job.id;
+            document.getElementById('detailTotal').textContent = job.total_numbers;
+            document.getElementById('detailValid').textContent = job.valid_count;
+            document.getElementById('detailInvalid').textContent = job.invalid_count;
+            document.getElementById('detailError').textContent = job.error_count;
+            
+            document.getElementById('validNumbers').innerHTML = job.valid_numbers.map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
+            document.getElementById('invalidNumbers').innerHTML = job.invalid_numbers.map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
+            document.getElementById('errorNumbers').innerHTML = job.error_numbers.map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
+            
+            currentJobId = jobId;
+            document.getElementById('jobDetails').classList.add('active');
+            document.getElementById('jobDetails').scrollIntoView({behavior: 'smooth'});
         }
+
+        function downloadJobResults() {
+            if (currentJobId) window.location.href = '/api/download/' + currentJobId;
+        }
+
+        function logout() { window.location.href = '/logout'; }
 
         initSocket();
         loadSettings();

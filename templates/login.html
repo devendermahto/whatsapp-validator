@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - WhatsApp Validator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; color: #fff; }
+        .login-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 40px; width: 100%; max-width: 400px; backdrop-filter: blur(10px); }
+        h1 { text-align: center; margin-bottom: 30px; color: #00d9ff; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #aaa; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #0f0f23; color: #fff; font-size: 14px; }
+        input:focus { outline: none; border-color: #00d9ff; }
+        button { width: 100%; padding: 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 16px; font-weight: 600; background: #00d9ff; color: #1a1a2e; transition: all 0.3s; }
+        button:hover { background: #00b8d4; transform: translateY(-2px); }
+        .error { color: #ff4444; text-align: center; margin-bottom: 15px; }
+        .setup-note { background: rgba(255,170,0,0.2); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1>🔐 WhatsApp Validator</h1>
+        
+        {% if setup %}
+        <div class="setup-note">
+            <strong>First Time Setup</strong><br>
+            Create your admin credentials to secure the app.
+        </div>
+        {% endif %}
+        
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+        
+        <form method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" name="password" required placeholder="Enter password">
+            </div>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+</body>
+</html>
