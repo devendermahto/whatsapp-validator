@@ -22,7 +22,7 @@ This guide covers setting up both Evolution API and the WhatsApp Validator web a
 version: '3'
 services:
   evolution-api:
-    image: atarrytech/evolution-api:latest
+    image: atendai/evolution-api:latest
     container_name: evolution-api
     ports:
       - "8089:8080"

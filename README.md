@@ -32,7 +32,7 @@ A self-hosted WhatsApp number validator using Evolution API. Features both Teleg
 version: '3'
 services:
   evolution-api:
-    image: atarrytech/evolution-api:latest
+    image: atendai/evolution-api:latest
     container_name: evolution-api
     ports:
       - "8089:8080"
