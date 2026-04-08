@@ -15,11 +15,11 @@ services:
 
   whatsapp-validator:
     build:
-      context: https://github.com/devendermahto/whatsapp-validator.git
+      context: .
       dockerfile: Dockerfile
     container_name: whatsapp-validator
     ports:
-      - "5050:5050"
+      - "5050:5000"
     volumes:
       - validator_data:/app
     restart: unless-stopped
