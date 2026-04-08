@@ -4,30 +4,26 @@ services:
     image: atarrytech/evolution-api:latest
     container_name: evolution-api
     ports:
-      - "8081:8080"
+      - "8089:8080"
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
-      - AUTHENTICATION_API_KEY=mypass123
+      - AUTHENTICATION_API_KEY=Mahto@Ertiga8585
     volumes:
       - evolution_instances:/evolution/instances
     restart: unless-stopped
 
   whatsapp-validator:
-    build: .
+    build:
+      context: https://github.com/devendermahto/whatsapp-validator.git
+      dockerfile: Dockerfile
     container_name: whatsapp-validator
     ports:
-      - "5000:5000"
-    env_file:
-      - .env
+      - "5050:5050"
     volumes:
       - validator_data:/app
     restart: unless-stopped
-    depends_on:
-      - evolution-api
 
 volumes:
   evolution_instances:
-    driver: local
   validator_data:
-    driver: local
