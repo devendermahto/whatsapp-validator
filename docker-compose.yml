@@ -14,9 +14,7 @@ services:
     restart: unless-stopped
 
   whatsapp-validator:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: devendermahto/whatsapp-validator:latest
     container_name: whatsapp-validator
     ports:
       - "5050:5000"

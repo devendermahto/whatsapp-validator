@@ -11,6 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ENV PYTHONUNBUFFERED=1
+
 EXPOSE 5000
 
-CMD ["sh", "-c", "python app.py & python main.py & tail -f /dev/null"]
+CMD ["python", "app.py"]
