@@ -8,16 +8,20 @@ services:
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
-      - AUTHENTICATION_API_KEY=Mahto@Ertiga8585
+      - AUTHENTICATION_API_KEY=${API_KEY}
     volumes:
       - evolution_instances:/evolution/instances
     restart: unless-stopped
 
   whatsapp-validator:
-    image: devendermahto/whatsapp-validator:latest
+    build:
+      context: https://github.com/devendermahto/whatsapp-validator.git
+      dockerfile: Dockerfile
     container_name: whatsapp-validator
     ports:
       - "5050:5000"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - validator_data:/app
     restart: unless-stopped

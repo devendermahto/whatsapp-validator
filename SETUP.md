@@ -8,15 +8,42 @@ This guide covers setting up both Evolution API and the WhatsApp Validator web a
 
 - Unraid server with Portainer installed
 - Telegram Bot Token (get from @BotFather)
+- GitHub account (for GitHub repo access)
 
 ---
 
-## Step 1: Deploy Everything (Single Stack)
+## Step 1: Make GitHub Repo Public
 
-In Portainer:
-1. Go to **Stacks** → **Add stack**
-2. Name: `whatsapp-validator`
-3. Paste this configuration:
+1. Go to: https://github.com/devendermahto/whatsapp-validator/settings
+2. **Danger zone** → **Change visibility**
+3. **Make public** → Confirm
+
+---
+
+## Step 2: Deploy Stack in Portainer
+
+1. Go to **Portainer** → **Stacks** → **Add stack**
+2. **Build method**: `Repository`
+3. **Repository URL**: `https://github.com/devendermahto/whatsapp-validator.git`
+4. **Reference/Branch**: `master`
+5. **Dockerfile**: `Dockerfile`
+6. **Build context**: `.`
+7. **Authentication**: OFF (no need since repo is public)
+
+### Environment Variables (IMPORTANT!)
+
+In the **Environment variables** section, add these:
+
+| Variable | Value |
+|----------|-------|
+| `API_KEY` | `Mahto@Ertiga8585` |
+| `BOT_TOKEN` | `5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0` |
+
+**Note:** These values are only visible in Portainer - they are NOT stored in the GitHub repo!
+
+### Web Editor Option
+
+Or paste directly in the editor (no need to configure repository):
 
 ```yaml
 version: '3'
@@ -29,7 +56,7 @@ services:
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
-      - AUTHENTICATION_API_KEY=Mahto@Ertiga8585
+      - AUTHENTICATION_API_KEY=${API_KEY}
     volumes:
       - evolution_instances:/evolution/instances
     restart: unless-stopped
@@ -40,24 +67,25 @@ services:
       dockerfile: Dockerfile
     container_name: whatsapp-validator
     ports:
-      - "5000:5000"
+      - "5050:5000"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - validator_data:/app
     restart: unless-stopped
-    environment:
-      - BOT_TOKEN=5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0
 
 volumes:
   evolution_instances:
   validator_data:
 ```
 
-4. Click **Deploy the stack**
-5. Wait 3-5 minutes for both containers to build and start
+Then add the environment variables in Portainer's "Environment variables" section:
+- `API_KEY` = `Mahto@Ertiga8585`
+- `BOT_TOKEN` = `5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0`
 
 ---
 
-## Step 2: Verify Containers
+## Step 3: Verify Containers
 
 Check in Portainer **Containers** tab:
 - `evolution-api` - should be running
@@ -65,50 +93,35 @@ Check in Portainer **Containers** tab:
 
 ---
 
-## Step 3: Access the Web App
+## Step 4: Access the Web App
 
-1. Open browser: `http://<your-unraid-ip>:5000`
+1. Open browser: `http://<your-unraid-ip>:5050`
 2. Login with:
    - **Username:** `devendermahto`
    - **Password:** `Mahto@Ertiga8585`
 
 ---
 
-## Step 4: Configure Evolution API
+## Step 5: Configure Evolution API in Web App
 
-In the web app:
 1. Enter your API details:
    - **API URL:** `http://<your-unraid-ip>:8089`
-   - **Instance Name:** `mywhatsapp` (or whatever you create)
+   - **Instance Name:** `mywhatsapp`
    - **API Key:** `Mahto@Ertiga8585`
 2. Click **Save & Connect**
 3. Should show "Connected ✅"
 
 ---
 
-## Step 5: Create WhatsApp Instance
+## Step 6: Create WhatsApp Instance
 
-Option A - Via Evolution API Dashboard:
-1. Open `http://<your-unraid-ip>:8089` in browser
-2. Create instance with name `mywhatsapp`
-3. Scan QR code with WhatsApp
-
-Option B - Via API:
+Option A - Via API:
 ```
 POST http://<your-unraid-ip>:8089/instance/create
 Body: {"instanceName": "mywhatsapp"}
 ```
 
----
-
-## Step 6: Start Validating Numbers
-
-1. Go to web app: `http://<your-unraid-ip>:5000`
-2. Login with your credentials
-3. Enter phone numbers in the text area
-4. Click **Start Validation**
-5. Watch real-time progress
-6. Download results when complete
+Then scan QR code with WhatsApp.
 
 ---
 
@@ -116,7 +129,7 @@ Body: {"instanceName": "mywhatsapp"}
 
 | Service | URL |
 |---------|-----|
-| Web App | `http://<unraid-ip>:5000` |
+| Web App | `http://<unraid-ip>:5050` |
 | Evolution API | `http://<unraid-ip>:8089` |
 | Portainer | `http://<unraid-ip>:9443` |
 
@@ -126,10 +139,19 @@ Body: {"instanceName": "mywhatsapp"}
 
 | Problem | Solution |
 |---------|----------|
+| Build fails | Make sure repo is public |
 | Web app not loading | Check container logs in Portainer |
 | API not connected | Verify instance is created and QR scanned |
-| Port already in use | Change port in docker-compose (e.g., 8082:8080) |
-| Build fails | Check GitHub repo is public or build context is correct |
+| Port already in use | Change port in docker-compose (e.g., 8090:8080) |
+| Environment variables not working | Make sure they are added in "Environment variables" section |
+
+---
+
+## Security Note
+
+- **Public repo:** ✅ Safe - no secrets in code
+- **Secrets:** ✅ Safe - stored only in Portainer environment variables
+- **API Key:** ✅ Safe - only you know it
 
 ---
 
@@ -137,4 +159,5 @@ Body: {"instanceName": "mywhatsapp"}
 
 - **Web App Username:** `devendermahto`
 - **Web App Password:** `Mahto@Ertiga8585`
-- **Telegram Bot:** Already configured in environment
+- **API Key:** `Mahto@Ertiga8585`
+- **Telegram Bot:** Already configured via environment variable

@@ -13,14 +13,20 @@ A self-hosted WhatsApp number validator using Evolution API. Features both Teleg
 - **Anti-Ban Protection** - Randomized delays (2.5-5.5s) between checks, 3-min cooldown
 - **SQLite Database** - Persistent storage for credentials and job history
 - **Self-Hosted** - Runs on your own Evolution API server
+- **Environment Variables** - Secrets stored safely in Portainer, not in code
 
 ## Quick Start (Unraid + Portainer)
 
-### Deploy Everything
+### Prerequisites
+
+1. Make GitHub repo public:
+   - Go to: https://github.com/devendermahto/whatsapp-validator/settings
+   - **Danger zone** → **Change visibility** → **Make public**
+
+### Deploy Stack
 
 1. Go to **Portainer** → **Stacks** → **Add stack**
-2. Name: `whatsapp-validator`
-3. Paste this:
+2. Use the **Web editor** and paste:
 
 ```yaml
 version: '3'
@@ -33,7 +39,7 @@ services:
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8080
-      - AUTHENTICATION_API_KEY=Mahto@Ertiga8585
+      - AUTHENTICATION_API_KEY=${API_KEY}
     volumes:
       - evolution_instances:/evolution/instances
     restart: unless-stopped
@@ -44,7 +50,9 @@ services:
       dockerfile: Dockerfile
     container_name: whatsapp-validator
     ports:
-      - "5000:5000"
+      - "5050:5000"
+    environment:
+      - BOT_TOKEN=${BOT_TOKEN}
     volumes:
       - validator_data:/app
     restart: unless-stopped
@@ -54,13 +62,20 @@ volumes:
   validator_data:
 ```
 
-4. Click **Deploy the stack** (wait 3-5 minutes)
+3. In **Environment variables** section, add:
+
+| Variable | Value |
+|----------|-------|
+| `API_KEY` | `Mahto@Ertiga8585` |
+| `BOT_TOKEN` | `5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0` |
+
+4. Click **Deploy the stack**
 
 ### Access
 
 | Service | URL |
 |---------|-----|
-| Web App | `http://<unraid-ip>:5000` |
+| Web App | `http://<unraid-ip>:5050` |
 | Evolution API | `http://<unraid-ip>:8089` |
 
 ### Login
@@ -87,19 +102,21 @@ Then scan QR code with WhatsApp.
 
 ---
 
-## Local Development
+## Environment Variables
 
-```bash
-git clone https://github.com/devendermahto/whatsapp-validator.git
-cd whatsapp-validator
+All sensitive data is stored in Portainer, not in the GitHub repo:
 
-pip install -r requirements.txt
-python app.py
-```
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `API_KEY` | Evolution API authentication key | `Mahto@Ertiga8585` |
+| `BOT_TOKEN` | Telegram Bot API Token | `5380085163:AAGPV...` |
 
-Open http://localhost:5000 and login with:
-- Username: `devendermahto`
-- Password: `Mahto@Ertiga8585`
+---
+
+## Security
+
+- **Public repo:** ✅ Safe - no secrets in code
+- **Secrets:** ✅ Safe - stored only in Portainer environment variables
 
 ---
 
