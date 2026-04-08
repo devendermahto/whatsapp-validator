@@ -8,6 +8,7 @@ This guide covers setting up both Evolution API and the WhatsApp Validator web a
 
 - Unraid server with Portainer installed
 - Telegram Bot Token (get from @BotFather)
+- Evolution API Key (from your Docker environment)
 - GitHub account (repo already public)
 
 ---
@@ -51,12 +52,12 @@ volumes:
   validator_data:
 ```
 
-3. In **Environment variables** section, add:
+3. In **Environment variables** section, add your own values:
 
-| Variable | Value |
-|----------|-------|
-| `API_KEY` | `Mahto@Ertiga8585` |
-| `BOT_TOKEN` | `5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0` |
+| Variable | Your Value |
+|----------|------------|
+| `API_KEY` | Your Evolution API key (e.g., from Docker AUTHENTICATION_API_KEY) |
+| `BOT_TOKEN` | Your Telegram Bot Token (from @BotFather) |
 
 4. Click **Deploy the stack**
 5. Wait 3-5 minutes for build to complete
@@ -74,9 +75,11 @@ Check in Portainer **Containers** tab:
 ## Step 3: Access the Web App
 
 1. Open browser: `http://<your-unraid-ip>:5050`
-2. Login with:
-   - **Username:** `devendermahto`
-   - **Password:** `Mahto@Ertiga8585`
+2. Login with default credentials:
+   - **Username:** `admin`
+   - **Password:** `admin123`
+   
+⚠️ **Important:** Change your password immediately after first login!
 
 ---
 
@@ -84,8 +87,8 @@ Check in Portainer **Containers** tab:
 
 1. Enter your API details:
    - **API URL:** `http://<your-unraid-ip>:8089`
-   - **Instance Name:** `mywhatsapp`
-   - **API Key:** `Mahto@Ertiga8585`
+   - **Instance Name:** Your instance name (created in Step 5)
+   - **API Key:** Your API key (same as API_KEY env variable)
 2. Click **Save & Connect**
 3. Should show "Connected ✅"
 
@@ -129,13 +132,13 @@ Then scan QR code with WhatsApp.
 
 - **Public repo:** ✅ Safe - no secrets in code
 - **Secrets:** ✅ Safe - stored only in Portainer environment variables
-- **API Key:** ✅ Safe - only you know it
+- **Default credentials:** ✅ Change admin password after first login!
 
 ---
 
-## Login Credentials
+## First Login
 
-- **Web App Username:** `devendermahto`
-- **Web App Password:** `Mahto@Ertiga8585`
-- **API Key:** `Mahto@Ertiga8585`
-- **Telegram Bot:** Already configured via environment variable
+- **Default Username:** `admin`
+- **Default Password:** `admin123`
+
+After login, go to settings and change your password!

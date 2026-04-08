@@ -7,7 +7,7 @@ A self-hosted WhatsApp number validator using Evolution API. Features both Teleg
 - **Web Interface** - Visual UI with real-time progress tracking
 - **Job History** - View all previous validation jobs with detailed results
 - **Background Processing** - Jobs run in background, no page refresh needed
-- **Authentication** - Secure login (username: `devendermahto`, password: `Mahto@Ertiga8585`)
+- **Authentication** - Secure login (customizable)
 - **Telegram Bot** - Validate numbers via Telegram commands
 - **Batch Processing** - Process numbers in batches of 50
 - **Anti-Ban Protection** - Randomized delays (2.5-5.5s) between checks, 3-min cooldown
@@ -62,12 +62,12 @@ volumes:
   validator_data:
 ```
 
-3. In **Environment variables** section, add:
+3. In **Environment variables** section, add your own values:
 
-| Variable | Value |
+| Variable | Value (Replace with your own) |
 |----------|-------|
-| `API_KEY` | `Mahto@Ertiga8585` |
-| `BOT_TOKEN` | `5380085163:AAGPVNNJl6QI_ymF42Lz4Qw_i1Fttx03VZ0` |
+| `API_KEY` | Your Evolution API key |
+| `BOT_TOKEN` | Your Telegram Bot Token |
 
 4. Click **Deploy the stack**
 
@@ -78,24 +78,24 @@ volumes:
 | Web App | `http://<unraid-ip>:5050` |
 | Evolution API | `http://<unraid-ip>:8089` |
 
-### Login
+### First Login (After Deployment)
 
-- **Username:** `devendermahto`
-- **Password:** `Mahto@Ertiga8585`
+- After first deployment, login with: `admin` / `admin123`
+- **Change password immediately** after first login!
 
 ### Configure
 
 In the web app:
 1. **API URL:** `http://<unraid-ip>:8089`
-2. **Instance Name:** `mywhatsapp`
-3. **API Key:** `Mahto@Ertiga8585`
+2. **Instance Name:** Your instance name
+3. **API Key:** Your API key
 4. Click **Save & Connect**
 
 ### Create WhatsApp Instance
 
 ```
 POST http://<unraid-ip>:8089/instance/create
-Body: {"instanceName": "mywhatsapp"}
+Body: {"instanceName": "your-instance-name"}
 ```
 
 Then scan QR code with WhatsApp.
@@ -106,10 +106,10 @@ Then scan QR code with WhatsApp.
 
 All sensitive data is stored in Portainer, not in the GitHub repo:
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `API_KEY` | Evolution API authentication key | `Mahto@Ertiga8585` |
-| `BOT_TOKEN` | Telegram Bot API Token | `5380085163:AAGPV...` |
+| Variable | Description |
+|----------|-------------|
+| `API_KEY` | Your Evolution API authentication key |
+| `BOT_TOKEN` | Your Telegram Bot API Token |
 
 ---
 
@@ -117,6 +117,7 @@ All sensitive data is stored in Portainer, not in the GitHub repo:
 
 - **Public repo:** ✅ Safe - no secrets in code
 - **Secrets:** ✅ Safe - stored only in Portainer environment variables
+- **Default credentials:** Change admin password after first login!
 
 ---
 
