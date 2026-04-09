@@ -42,20 +42,49 @@ def init_db():
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY,
             status TEXT DEFAULT 'pending',
+            country_code TEXT DEFAULT '91',
             total_numbers INTEGER DEFAULT 0,
             valid_count INTEGER DEFAULT 0,
             invalid_count INTEGER DEFAULT 0,
             error_count INTEGER DEFAULT 0,
+            skipped_count INTEGER DEFAULT 0,
             processed_count INTEGER DEFAULT 0,
             valid_numbers TEXT,
             invalid_numbers TEXT,
             error_numbers TEXT,
+            skipped_numbers TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             completed_at TIMESTAMP
         )
     """)
     conn.commit()
     conn.close()
+
+
+def normalize_number(phone, country_code):
+    """
+    Normalize phone number based on selected country code.
+    Returns (normalized_number, status)
+    - status: 'valid_format' | 'skipped' | 'error'
+    """
+    digits = re.sub(r'\D', '', phone)
+    
+    if not digits:
+        return phone, 'error'
+    
+    if digits.startswith(country_code):
+        return digits, 'valid_format'
+    
+    if len(digits) > 10:
+        first_two = digits[:2]
+        if first_two in ['91', '1', '44', '92', '971', '966', '20', '234', '254', '880', '973', '965', '968', '973', '212']:
+            return digits, 'skipped'
+        return digits, 'error'
+    
+    if len(digits) == 10:
+        return country_code + digits, 'valid_format'
+    
+    return digits, 'error'
 
 
 def get_api_credentials(user_id=1):
@@ -108,10 +137,10 @@ def get_jobs(limit=50):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, status, total_numbers, valid_count, invalid_count, error_count, 
-               processed_count, created_at, completed_at
-        FROM jobs 
-        ORDER BY created_at DESC 
+        SELECT id, status, country_code, total_numbers, valid_count, invalid_count, error_count,
+               skipped_count, processed_count, created_at, completed_at
+        FROM jobs
+        ORDER BY created_at DESC
         LIMIT ?
     """, (limit,))
     rows = cursor.fetchall()
@@ -121,13 +150,15 @@ def get_jobs(limit=50):
         jobs.append({
             'id': row[0],
             'status': row[1],
-            'total_numbers': row[2],
-            'valid_count': row[3],
-            'invalid_count': row[4],
-            'error_count': row[5],
-            'processed_count': row[6],
-            'created_at': row[7],
-            'completed_at': row[8]
+            'country_code': row[2],
+            'total_numbers': row[3],
+            'valid_count': row[4],
+            'invalid_count': row[5],
+            'error_count': row[6],
+            'skipped_count': row[7],
+            'processed_count': row[8],
+            'created_at': row[9],
+            'completed_at': row[10]
         })
     return jobs
 
@@ -136,9 +167,9 @@ def get_job(job_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, status, total_numbers, valid_count, invalid_count, error_count,
-               processed_count, valid_numbers, invalid_numbers, error_numbers,
-               created_at, completed_at
+        SELECT id, status, country_code, total_numbers, valid_count, invalid_count, error_count,
+               skipped_count, processed_count, valid_numbers, invalid_numbers, error_numbers,
+               skipped_numbers, created_at, completed_at
         FROM jobs WHERE id = ?
     """, (job_id,))
     row = cursor.fetchone()
@@ -147,53 +178,73 @@ def get_job(job_id):
         return {
             'id': row[0],
             'status': row[1],
-            'total_numbers': row[2],
-            'valid_count': row[3],
-            'invalid_count': row[4],
-            'error_count': row[5],
-            'processed_count': row[6],
-            'valid_numbers': row[7].split(',') if row[7] else [],
-            'invalid_numbers': row[8].split(',') if row[8] else [],
-            'error_numbers': row[9].split(',') if row[9] else [],
-            'created_at': row[10],
-            'completed_at': row[11]
+            'country_code': row[2],
+            'total_numbers': row[3],
+            'valid_count': row[4],
+            'invalid_count': row[5],
+            'error_count': row[6],
+            'skipped_count': row[7],
+            'processed_count': row[8],
+            'valid_numbers': row[9].split(',') if row[9] else [],
+            'invalid_numbers': row[10].split(',') if row[10] else [],
+            'error_numbers': row[11].split(',') if row[11] else [],
+            'skipped_numbers': row[12].split(',') if row[12] else [],
+            'created_at': row[13],
+            'completed_at': row[14]
         }
     return None
 
 
-def create_job(job_id, total):
+def create_job(job_id, total, country_code='91'):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO jobs (id, status, total_numbers, processed_count)
-        VALUES (?, 'processing', ?, 0)
-    """, (job_id, total))
+        INSERT INTO jobs (id, status, country_code, total_numbers, processed_count)
+        VALUES (?, 'processing', ?, ?, 0)
+    """, (job_id, country_code, total))
     conn.commit()
     conn.close()
 
 
-def update_job_progress(job_id, valid, invalid, error):
+def update_job_progress(job_id, valid, invalid, error, skipped=0):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE jobs SET valid_count = ?, invalid_count = ?, error_count = ? WHERE id = ?
-    """, (valid, invalid, error, job_id))
+        UPDATE jobs SET valid_count = ?, invalid_count = ?, error_count = ?, skipped_count = ? WHERE id = ?
+    """, (valid, invalid, error, skipped, job_id))
     conn.commit()
     conn.close()
 
 
-def complete_job(job_id, valid_numbers, invalid_numbers, error_numbers):
+def update_job_status(job_id, status):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE jobs SET status = ? WHERE id = ?", (status, job_id))
+    conn.commit()
+    conn.close()
+
+
+def delete_job(job_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+    conn.commit()
+    conn.close()
+
+
+def complete_job(job_id, valid_numbers, invalid_numbers, error_numbers, skipped_numbers):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-        UPDATE jobs SET 
+        UPDATE jobs SET
             status = 'completed',
             valid_numbers = ?,
             invalid_numbers = ?,
             error_numbers = ?,
+            skipped_numbers = ?,
             completed_at = CURRENT_TIMESTAMP
         WHERE id = ?
-    """, (','.join(valid_numbers), ','.join(invalid_numbers), ','.join(error_numbers), job_id))
+    """, (','.join(valid_numbers), ','.join(invalid_numbers), ','.join(error_numbers), ','.join(skipped_numbers), job_id))
     conn.commit()
     conn.close()
 
@@ -236,25 +287,53 @@ def check_connection(api_url, instance_name, api_key):
         return False
 
 
-def process_numbers(numbers, api_url, instance_name, api_key, progress_callback=None, job_id=None):
-    results = {'valid': [], 'invalid': [], 'error': []}
+def process_numbers(numbers, api_url, instance_name, api_key, country_code='91', progress_callback=None, job_id=None):
+    results = {'valid': [], 'invalid': [], 'error': [], 'skipped': []}
+    processed_numbers = []
     
-    numbers = list(set(numbers))
-    batches = list(chunk_list(numbers, 50))
+    normalized_numbers = []
+    for num in numbers:
+        normalized, status = normalize_number(num, country_code)
+        if status == 'skipped':
+            results['skipped'].append(num)
+        elif status == 'valid_format':
+            normalized_numbers.append(normalized)
+        else:
+            results['error'].append(num)
+    
+    normalized_numbers = list(set(normalized_numbers))
+    batches = list(chunk_list(normalized_numbers, 50))
     
     for batch_idx, batch in enumerate(batches):
+        if job_id:
+            job = get_job(job_id)
+            if job and job['status'] == 'stopped':
+                break
+            while job and job['status'] == 'paused':
+                time.sleep(2)
+                job = get_job(job_id)
+                if job and job['status'] == 'stopped':
+                    break
+        
         with ThreadPoolExecutor(max_workers=2) as executor:
             futures = {executor.submit(check_number, api_url, instance_name, api_key, num): num for num in batch}
             
             for future in as_completed(futures):
                 result = future.result()
                 results[result['status']].append(result['number'])
+                processed_numbers.append(result['number'])
                 
                 if progress_callback:
                     progress_callback(result)
                 
                 if job_id:
-                    update_job_progress(job_id, len(results['valid']), len(results['invalid']), len(results['error']))
+                    update_job_progress(
+                        job_id, 
+                        len(results['valid']), 
+                        len(results['invalid']), 
+                        len(results['error']),
+                        len(results['skipped'])
+                    )
                 
                 time.sleep(random.uniform(2.5, 5.5))
         
@@ -264,6 +343,8 @@ def process_numbers(numbers, api_url, instance_name, api_key, progress_callback=
                 progress_callback({'type': 'batch_complete', 'batch': batch_idx + 1, 'total': len(batches)})
     
     if job_id:
-        complete_job(job_id, results['valid'], results['invalid'], results['error'])
+        job = get_job(job_id)
+        if job and job['status'] != 'stopped':
+            complete_job(job_id, results['valid'], results['invalid'], results['error'], results['skipped'])
     
     return results

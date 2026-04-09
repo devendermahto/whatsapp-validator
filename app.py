@@ -1,6 +1,9 @@
 import os
 import re
 import uuid
+import csv
+import io
+from datetime import datetime
 from flask import Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 from flask_socketio import SocketIO, emit
 import threading
@@ -97,6 +100,42 @@ def get_job_details(job_id):
     return jsonify({'error': 'Job not found'}), 404
 
 
+@app.route('/api/job/<job_id>/pause', methods=['POST'])
+def pause_job(job_id):
+    job = core.get_job(job_id)
+    if job:
+        core.update_job_status(job_id, 'paused')
+        return jsonify({'success': True, 'message': 'Job paused'})
+    return jsonify({'error': 'Job not found'}), 404
+
+
+@app.route('/api/job/<job_id>/resume', methods=['POST'])
+def resume_job(job_id):
+    job = core.get_job(job_id)
+    if job:
+        core.update_job_status(job_id, 'processing')
+        return jsonify({'success': True, 'message': 'Job resumed'})
+    return jsonify({'error': 'Job not found'}), 404
+
+
+@app.route('/api/job/<job_id>/stop', methods=['POST'])
+def stop_job(job_id):
+    job = core.get_job(job_id)
+    if job:
+        core.update_job_status(job_id, 'stopped')
+        return jsonify({'success': True, 'message': 'Job stopped'})
+    return jsonify({'error': 'Job not found'}), 404
+
+
+@app.route('/api/job/<job_id>', methods=['DELETE'])
+def delete_job(job_id):
+    job = core.get_job(job_id)
+    if job:
+        core.delete_job(job_id)
+        return jsonify({'success': True, 'message': 'Job deleted'})
+    return jsonify({'error': 'Job not found'}), 404
+
+
 @app.route('/api/check-connection')
 def check_connection():
     creds = core.get_api_credentials()
@@ -111,15 +150,16 @@ def check_connection():
 def validate():
     data = request.json
     text = data.get('text', '')
+    country_code = data.get('country_code', '91')
     
-    numbers = re.findall(r'\d{10,15}', text)
+    numbers = re.findall(r'\d+', text)
     if not numbers:
-        return jsonify({'success': False, 'error': 'No valid numbers found (10-15 digits)'})
+        return jsonify({'success': False, 'error': 'No valid numbers found'})
     
     numbers = list(set(numbers))
     job_id = str(uuid.uuid4())[:8]
     
-    core.create_job(job_id, len(numbers))
+    core.create_job(job_id, len(numbers), country_code)
     active_tasks[job_id] = True
     
     def progress_callback(result):
@@ -142,6 +182,83 @@ def validate():
                 creds['api_url'], 
                 creds['instance_name'], 
                 creds['api_key'],
+                country_code,
+                progress_callback,
+                job_id
+            )
+        except Exception as e:
+            print(f"Validation error: {e}")
+        finally:
+            active_tasks[job_id] = False
+            socketio.emit('complete', {'job_id': job_id})
+    
+    thread = threading.Thread(target=run_validation)
+    thread.start()
+    
+    return jsonify({'success': True, 'job_id': job_id, 'total': len(numbers)})
+
+
+@app.route('/api/validate/file', methods=['POST'])
+def validate_file():
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'No file uploaded'})
+    
+    file = request.files['file']
+    country_code = request.form.get('country_code', '91')
+    
+    if file.filename == '':
+        return jsonify({'success': False, 'error': 'No file selected'})
+    
+    try:
+        content = file.read().decode('utf-8')
+    except:
+        content = file.read().decode('latin-1')
+    
+    numbers = []
+    for line in content.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        parts = re.split(r'[,\s]+', line)
+        for part in parts:
+            part = re.sub(r'\D', '', part)
+            if part:
+                numbers.append(part)
+    
+    numbers = list(set(numbers))
+    
+    if not numbers:
+        return jsonify({'success': False, 'error': 'No valid numbers found in file'})
+    
+    if len(numbers) > 100000:
+        return jsonify({'success': False, 'error': 'Maximum 100,000 numbers allowed'})
+    
+    job_id = str(uuid.uuid4())[:8]
+    
+    core.create_job(job_id, len(numbers), country_code)
+    active_tasks[job_id] = True
+    
+    def progress_callback(result):
+        if result.get('type') == 'batch_complete':
+            socketio.emit('batch_complete', result)
+            return
+        
+        socketio.emit('progress', {
+            'job_id': job_id,
+            'status': result.get('status'),
+            'number': result.get('number'),
+            'emoji': result.get('emoji')
+        })
+    
+    def run_validation():
+        creds = core.get_api_credentials()
+        try:
+            core.process_numbers(
+                numbers, 
+                creds['api_url'], 
+                creds['instance_name'], 
+                creds['api_key'],
+                country_code,
                 progress_callback,
                 job_id
             )
@@ -163,29 +280,35 @@ def download_results(job_id):
     if not job:
         return jsonify({'error': 'Job not found'})
     
-    content = []
-    content.append("=== WhatsApp Validator Results ===")
-    content.append(f"Job ID: {job_id}")
-    content.append(f"Total: {job['total_numbers']}")
-    content.append(f"Valid: {job['valid_count']}")
-    content.append(f"Invalid: {job['invalid_count']}")
-    content.append(f"Error: {job['error_count']}")
-    content.append("")
-    content.append("=== Valid Numbers ===")
-    content.extend(job['valid_numbers'])
-    content.append("")
-    content.append("=== Invalid Numbers ===")
-    content.extend(job['invalid_numbers'])
-    content.append("")
-    content.append("=== Error Numbers ===")
-    content.extend(job['error_numbers'])
+    output = io.StringIO()
+    writer = csv.writer(output)
     
-    filename = f"results_{job_id}.txt"
-    filepath = os.path.join(os.path.dirname(__file__), filename)
-    with open(filepath, 'w') as f:
-        f.write('\n'.join(content))
+    writer.writerow(['Number', 'Status', 'Job ID', 'Validated At'])
     
-    return send_file(filepath, as_attachment=True, download_name=f"whatsapp_results_{job_id}.txt")
+    timestamp = job.get('completed_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    for num in job.get('valid_numbers', []):
+        writer.writerow([num, 'valid', job_id, timestamp])
+    
+    for num in job.get('invalid_numbers', []):
+        writer.writerow([num, 'invalid', job_id, timestamp])
+    
+    for num in job.get('error_numbers', []):
+        writer.writerow([num, 'error', job_id, timestamp])
+    
+    for num in job.get('skipped_numbers', []):
+        writer.writerow([num, 'skipped', job_id, timestamp])
+    
+    output.seek(0)
+    
+    filename = f"whatsapp_validation_{job_id}.csv"
+    
+    return send_file(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=filename
+    )
 
 
 if __name__ == '__main__':

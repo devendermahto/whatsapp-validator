@@ -8,7 +8,7 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; color: #fff; }
-        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
         h1 { color: #00d9ff; }
         .logout-btn { padding: 8px 16px; background: #ff4444; color: #fff; border: none; border-radius: 6px; cursor: pointer; }
@@ -18,15 +18,18 @@
         
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; color: #aaa; font-size: 14px; }
-        input, textarea { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #0f0f23; color: #fff; font-size: 14px; }
-        input:focus, textarea:focus { outline: none; border-color: #00d9ff; }
+        input, textarea, select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #333; background: #0f0f23; color: #fff; font-size: 14px; }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #00d9ff; }
         
-        button { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.3s; }
+        button { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s; }
         .btn-primary { background: #00d9ff; color: #1a1a2e; }
         .btn-primary:hover { background: #00b8d4; }
         .btn-success { background: #00ff88; color: #1a1a2e; }
         .btn-success:hover { background: #00cc6a; }
         .btn-download { background: #ff6b6b; color: #fff; }
+        .btn-warning { background: #ffaa00; color: #1a1a2e; }
+        .btn-danger { background: #ff4444; color: #fff; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; margin-right: 5px; }
         
         .status-row { display: flex; align-items: center; gap: 10px; }
         .status-dot { width: 12px; height: 12px; border-radius: 50%; }
@@ -41,9 +44,9 @@
         .progress-fill { height: 100%; background: linear-gradient(90deg, #00d9ff, #00ff88); width: 0%; transition: width 0.3s; }
         .progress-text { text-align: center; margin-top: 10px; color: #aaa; font-size: 14px; }
         
-        .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px; }
-        .stat-box { text-align: center; padding: 20px; border-radius: 10px; background: rgba(255,255,255,0.05); }
-        .stat-box .count { font-size: 28px; font-weight: bold; }
+        .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-top: 20px; }
+        .stat-box { text-align: center; padding: 15px; border-radius: 10px; background: rgba(255,255,255,0.05); }
+        .stat-box .count { font-size: 24px; font-weight: bold; }
         .stat-box.total { border: 2px solid #00d9ff; }
         .stat-box.total .count { color: #00d9ff; }
         .stat-box.valid { border: 2px solid #00ff88; }
@@ -52,14 +55,18 @@
         .stat-box.invalid .count { color: #ff4444; }
         .stat-box.error { border: 2px solid #ffaa00; }
         .stat-box.error .count { color: #ffaa00; }
+        .stat-box.skipped { border: 2px solid #9b59b6; }
+        .stat-box.skipped .count { color: #9b59b6; }
         
         .history-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .history-table th, .history-table td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
+        .history-table th, .history-table td { padding: 10px; text-align: left; border-bottom: 1px solid #333; font-size: 13px; }
         .history-table th { background: rgba(255,255,255,0.1); color: #00d9ff; }
         .history-table tr:hover { background: rgba(255,255,255,0.05); }
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; }
         .badge-completed { background: #00ff88; color: #1a1a2e; }
         .badge-processing { background: #ffaa00; color: #1a1a2e; }
+        .badge-paused { background: #9b59b6; color: #fff; }
+        .badge-stopped { background: #ff4444; color: #fff; }
         .badge-pending { background: #666; color: #fff; }
         
         .job-details { display: none; margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.3); border-radius: 10px; }
@@ -68,7 +75,21 @@
         .numbers-list div { padding: 4px 0; border-bottom: 1px solid #222; }
         
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } .stats { grid-template-columns: repeat(2, 1fr); } }
+        .input-row { display: flex; gap: 10px; align-items: center; }
+        .input-row select { width: 140px; flex-shrink: 0; }
+        .input-row textarea { flex: 1; }
+        
+        .file-upload { border: 2px dashed #333; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.3s; }
+        .file-upload:hover { border-color: #00d9ff; }
+        .file-upload input { display: none; }
+        .file-upload-text { color: #aaa; }
+        
+        @media (max-width: 768px) { 
+            .grid { grid-template-columns: 1fr; } 
+            .stats { grid-template-columns: repeat(3, 1fr); }
+            .input-row { flex-direction: column; }
+            .input-row select { width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -83,7 +104,7 @@
                 <h2>🔗 API Configuration</h2>
                 <div class="form-group">
                     <label>API URL</label>
-                    <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8081">
+                    <input type="text" id="apiUrl" placeholder="http://192.168.1.100:8089">
                 </div>
                 <div class="form-group">
                     <label>Instance Name</label>
@@ -102,11 +123,45 @@
             
             <div class="card">
                 <h2>📲 Validate Numbers</h2>
+                
                 <div class="form-group">
-                    <label>Enter phone numbers (any format)</label>
-                    <textarea id="phoneInput" rows="5" placeholder="1234567890&#10;9876543210&#10;Or paste text with numbers..."></textarea>
+                    <label>Select Country Code</label>
+                    <select id="countryCode">
+                        <option value="91" selected>+91 (India)</option>
+                        <option value="1">+1 (US/Canada)</option>
+                        <option value="44">+44 (UK)</option>
+                        <option value="92">+92 (Pakistan)</option>
+                        <option value="971">+971 (UAE)</option>
+                        <option value="966">+966 (Saudi)</option>
+                        <option value="20">+20 (Egypt)</option>
+                        <option value="234">+234 (Nigeria)</option>
+                        <option value="254">+254 (Kenya)</option>
+                        <option value="880">+880 (Bangladesh)</option>
+                        <option value="973">+973 (Bahrain)</option>
+                        <option value="965">+965 (Kuwait)</option>
+                        <option value="968">+968 (Oman)</option>
+                        <option value="212">+212 (Morocco)</option>
+                    </select>
                 </div>
+                
+                <div class="form-group">
+                    <label>Enter phone numbers (one per line or any format)</label>
+                    <textarea id="phoneInput" rows="4" placeholder="1234567890&#10;9876543210&#10;Or paste text with numbers..."></textarea>
+                </div>
+                
                 <button class="btn-success" onclick="startValidation()">Start Validation</button>
+                
+                <div style="margin: 20px 0; text-align: center; color: #666;">— OR —</div>
+                
+                <label class="file-upload">
+                    <input type="file" id="fileInput" accept=".txt,.csv" onchange="handleFileUpload(event)">
+                    <div class="file-upload-text">
+                        📁 Click to upload TXT/CSV file<br>
+                        <small>(One number per line, max 100,000)</small>
+                    </div>
+                </label>
+                <div id="fileInfo" style="margin-top: 10px; color: #00d9ff; display: none;"></div>
+                <button class="btn-success" id="validateFileBtn" style="display: none; margin-top: 10px;" onclick="validateFile()">Validate From File</button>
                 
                 <div class="progress-container" id="progressCard">
                     <div class="progress-bar">
@@ -116,10 +171,11 @@
                 </div>
                 
                 <div id="currentJobStats" style="display: none; margin-top: 15px;">
-                    <div class="stats" style="grid-template-columns: repeat(3, 1fr);">
+                    <div class="stats" style="grid-template-columns: repeat(4, 1fr);">
                         <div class="stat-box valid"><div class="count" id="currValid">0</div><div>Valid</div></div>
                         <div class="stat-box invalid"><div class="count" id="currInvalid">0</div><div>Invalid</div></div>
                         <div class="stat-box error"><div class="count" id="currError">0</div><div>Error</div></div>
+                        <div class="stat-box skipped"><div class="count" id="currSkipped">0</div><div>Skipped</div></div>
                     </div>
                 </div>
             </div>
@@ -131,17 +187,19 @@
                 <thead>
                     <tr>
                         <th>Job ID</th>
+                        <th>Country</th>
                         <th>Total</th>
                         <th>Valid</th>
                         <th>Invalid</th>
                         <th>Error</th>
+                        <th>Skipped</th>
                         <th>Status</th>
                         <th>Date</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="jobsTable">
-                    <tr><td colspan="8" style="text-align: center; color: #666;">Loading...</td></tr>
+                    <tr><td colspan="10" style="text-align: center; color: #666;">Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -153,21 +211,33 @@
                 <div class="stat-box valid"><div class="count" id="detailValid">0</div><div>Valid</div></div>
                 <div class="stat-box invalid"><div class="count" id="detailInvalid">0</div><div>Invalid</div></div>
                 <div class="stat-box error"><div class="count" id="detailError">0</div><div>Error</div></div>
+                <div class="stat-box skipped"><div class="count" id="detailSkipped">0</div><div>Skipped</div></div>
             </div>
-            <button class="btn-download" style="margin-top: 15px;" onclick="downloadJobResults()">📥 Download Results</button>
             
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px;">
+            <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="btn-download" onclick="downloadJobResults()">📥 Download CSV</button>
+                <button class="btn-warning btn-sm" id="pauseBtn" onclick="pauseJob()">⏸ Pause</button>
+                <button class="btn-success btn-sm" id="resumeBtn" onclick="resumeJob()" style="display:none;">▶ Resume</button>
+                <button class="btn-danger btn-sm" id="stopBtn" onclick="stopJob()">⏹ Stop</button>
+                <button class="btn-danger btn-sm" onclick="deleteJob()">🗑 Delete</button>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-top: 20px;">
                 <div>
-                    <h4 style="color: #00ff88; margin-bottom: 10px;">Valid Numbers</h4>
+                    <h4 style="color: #00ff88; margin-bottom: 10px;">Valid Numbers ✅</h4>
                     <div class="numbers-list" id="validNumbers"></div>
                 </div>
                 <div>
-                    <h4 style="color: #ff4444; margin-bottom: 10px;">Invalid Numbers</h4>
+                    <h4 style="color: #ff4444; margin-bottom: 10px;">Invalid Numbers ⛔️</h4>
                     <div class="numbers-list" id="invalidNumbers"></div>
                 </div>
                 <div>
-                    <h4 style="color: #ffaa00; margin-bottom: 10px;">Error Numbers</h4>
+                    <h4 style="color: #ffaa00; margin-bottom: 10px;">Error Numbers ⏳</h4>
                     <div class="numbers-list" id="errorNumbers"></div>
+                </div>
+                <div>
+                    <h4 style="color: #9b59b6; margin-bottom: 10px;">Skipped Numbers ⏭️</h4>
+                    <div class="numbers-list" id="skippedNumbers"></div>
                 </div>
             </div>
         </div>
@@ -176,24 +246,30 @@
     <script>
         let socket;
         let currentJobId = null;
+        let uploadedFile = null;
+        
+        const countryNames = {
+            '91': '+91', '1': '+1', '44': '+44', '92': '+92', '971': '+971',
+            '966': '+966', '20': '+20', '234': '+234', '254': '+254', '880': '+880',
+            '973': '+973', '965': '+965', '968': '+968', '212': '+212'
+        };
         
         function initSocket() {
             socket = io();
             socket.on('progress', (data) => {
                 if (currentJobId && data.job_id === currentJobId) {
-                    const total = parseInt(document.getElementById('progressText').dataset.total || 0);
-                    const processed = total;
-                    const percent = (processed / total) * 100;
-                    document.getElementById('progressFill').style.width = percent + '%';
+                    document.getElementById('progressFill').style.width = '50%';
                     document.getElementById('progressText').textContent = `${data.number} - ${data.status}`;
                     
                     if (data.status === 'valid') document.getElementById('currValid').textContent = parseInt(document.getElementById('currValid').textContent) + 1;
                     if (data.status === 'invalid') document.getElementById('currInvalid').textContent = parseInt(document.getElementById('currInvalid').textContent) + 1;
                     if (data.status === 'error') document.getElementById('currError').textContent = parseInt(document.getElementById('currError').textContent) + 1;
+                    if (data.status === 'skipped') document.getElementById('currSkipped').textContent = parseInt(document.getElementById('currSkipped').textContent) + 1;
                 }
             });
             socket.on('complete', (data) => {
                 if (currentJobId && data.job_id === currentJobId) {
+                    document.getElementById('progressFill').style.width = '100%';
                     document.getElementById('progressText').textContent = 'Completed!';
                     loadJobs();
                 }
@@ -251,31 +327,36 @@
             const data = await res.json();
             const tbody = document.getElementById('jobsTable');
             if (data.jobs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: #666;">No jobs yet</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" style="text-align: center; color: #666;">No jobs yet</td></tr>';
                 return;
             }
             tbody.innerHTML = data.jobs.map(job => `
                 <tr>
                     <td><code>${job.id}</code></td>
+                    <td>+${job.country_code}</td>
                     <td>${job.total_numbers}</td>
                     <td style="color: #00ff88">${job.valid_count}</td>
                     <td style="color: #ff4444">${job.invalid_count}</td>
                     <td style="color: #ffaa00">${job.error_count}</td>
+                    <td style="color: #9b59b6">${job.skipped_count || 0}</td>
                     <td><span class="badge badge-${job.status}">${job.status}</span></td>
                     <td>${new Date(job.created_at).toLocaleDateString()}</td>
-                    <td><button onclick="viewJob('${job.id}')">View</button></td>
+                    <td>
+                        <button class="btn-sm btn-primary" onclick="viewJob('${job.id}')">View</button>
+                    </td>
                 </tr>
             `).join('');
         }
 
         async function startValidation() {
             const text = document.getElementById('phoneInput').value;
+            const countryCode = document.getElementById('countryCode').value;
             if (!text.trim()) return alert('Enter phone numbers');
 
             const res = await fetch('/api/validate', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({text: text})
+                body: JSON.stringify({text: text, country_code: countryCode})
             });
             const data = await res.json();
             if (data.success) {
@@ -283,11 +364,52 @@
                 document.getElementById('progressCard').style.display = 'block';
                 document.getElementById('progressFill').style.width = '0%';
                 document.getElementById('progressText').textContent = `Processing ${data.total} numbers...`;
-                document.getElementById('progressText').dataset.total = data.total;
                 document.getElementById('currentJobStats').style.display = 'block';
                 document.getElementById('currValid').textContent = '0';
                 document.getElementById('currInvalid').textContent = '0';
                 document.getElementById('currError').textContent = '0';
+                document.getElementById('currSkipped').textContent = '0';
+            } else {
+                alert('Error: ' + data.error);
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                uploadedFile = file;
+                const lines = file.name.split('\n');
+                document.getElementById('fileInfo').textContent = `📁 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                document.getElementById('fileInfo').style.display = 'block';
+                document.getElementById('validateFileBtn').style.display = 'inline-block';
+            }
+        }
+
+        async function validateFile() {
+            if (!uploadedFile) return alert('No file selected');
+            const countryCode = document.getElementById('countryCode').value;
+            
+            const formData = new FormData();
+            formData.append('file', uploadedFile);
+            formData.append('country_code', countryCode);
+            
+            const res = await fetch('/api/validate/file', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await res.json();
+            if (data.success) {
+                currentJobId = data.job_id;
+                document.getElementById('progressCard').style.display = 'block';
+                document.getElementById('progressFill').style.width = '0%';
+                document.getElementById('progressText').textContent = `Processing ${data.total} numbers...`;
+                document.getElementById('currentJobStats').style.display = 'block';
+                document.getElementById('currValid').textContent = '0';
+                document.getElementById('currInvalid').textContent = '0';
+                document.getElementById('currError').textContent = '0';
+                document.getElementById('currSkipped').textContent = '0';
+            } else {
+                alert('Error: ' + data.error);
             }
         }
 
@@ -297,19 +419,85 @@
             if (!data.job) return alert('Job not found');
             
             const job = data.job;
+            currentJobId = jobId;
             document.getElementById('detailJobId').textContent = job.id;
             document.getElementById('detailTotal').textContent = job.total_numbers;
             document.getElementById('detailValid').textContent = job.valid_count;
             document.getElementById('detailInvalid').textContent = job.invalid_count;
             document.getElementById('detailError').textContent = job.error_count;
+            document.getElementById('detailSkipped').textContent = job.skipped_count || 0;
             
             document.getElementById('validNumbers').innerHTML = job.valid_numbers.map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
             document.getElementById('invalidNumbers').innerHTML = job.invalid_numbers.map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
             document.getElementById('errorNumbers').innerHTML = job.error_numbers.map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
+            document.getElementById('skippedNumbers').innerHTML = (job.skipped_numbers || []).map(n => `<div>${n}</div>`).join('') || '<div style="color:#666">None</div>';
             
-            currentJobId = jobId;
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resumeBtn = document.getElementById('resumeBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            
+            if (job.status === 'processing') {
+                pauseBtn.style.display = 'inline-block';
+                resumeBtn.style.display = 'none';
+                stopBtn.style.display = 'inline-block';
+            } else if (job.status === 'paused') {
+                pauseBtn.style.display = 'none';
+                resumeBtn.style.display = 'inline-block';
+                stopBtn.style.display = 'inline-block';
+            } else {
+                pauseBtn.style.display = 'none';
+                resumeBtn.style.display = 'none';
+                stopBtn.style.display = 'none';
+            }
+            
             document.getElementById('jobDetails').classList.add('active');
             document.getElementById('jobDetails').scrollIntoView({behavior: 'smooth'});
+        }
+
+        async function pauseJob() {
+            if (!currentJobId) return;
+            const res = await fetch('/api/job/' + currentJobId + '/pause', {method: 'POST'});
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('pauseBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'inline-block';
+                loadJobs();
+            }
+        }
+
+        async function resumeJob() {
+            if (!currentJobId) return;
+            const res = await fetch('/api/job/' + currentJobId + '/resume', {method: 'POST'});
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('resumeBtn').style.display = 'none';
+                document.getElementById('pauseBtn').style.display = 'inline-block';
+                loadJobs();
+            }
+        }
+
+        async function stopJob() {
+            if (!currentJobId) return;
+            if (!confirm('Are you sure you want to stop this job?')) return;
+            const res = await fetch('/api/job/' + currentJobId + '/stop', {method: 'POST'});
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('pauseBtn').style.display = 'none';
+                document.getElementById('resumeBtn').style.display = 'none';
+                document.getElementById('stopBtn').style.display = 'none';
+                loadJobs();
+            }
+        }
+
+        async function deleteJob() {
+            if (!currentJobId) return;
+            if (!confirm('Are you sure you want to delete this job?')) return;
+            const res = await fetch('/api/job/' + currentJobId, {method: 'DELETE'});
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('jobDetails').classList.remove('active');
+                loadJobs();
+            }
         }
 
         function downloadJobResults() {
