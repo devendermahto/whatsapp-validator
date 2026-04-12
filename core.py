@@ -261,18 +261,52 @@ def check_number(api_url, instance_name, api_key, phone_number):
     payload = {"numbers": [phone_number]}
     
     try:
-        response = requests.post(url, headers=headers, json=payload, timeout=10)
+        print(f"[DEBUG] Checking number: {phone_number}")
+        print(f"[DEBUG] URL: {url}")
+        print(f"[DEBUG] API Key: {api_key[:10]}..." if len(api_key) > 10 else f"[DEBUG] API Key: {api_key}")
+        
+        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        print(f"[DEBUG] Response Status: {response.status_code}")
+        print(f"[DEBUG] Response Body: {response.text[:500]}")
+        
         if response.status_code == 200:
-            data = response.json()
-            results = data.get('response', [])
-            if results and len(results) > 0:
+            try:
+                data = response.json()
+                print(f"[DEBUG] JSON Data: {data}")
+            except:
+                print(f"[DEBUG] Not JSON response")
+                return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': 'Invalid JSON response'}
+            
+            results = data.get('response') or data.get('data') or []
+            if results and isinstance(results, list) and len(results) > 0:
                 exists = results[0].get('exists', False)
+                print(f"[DEBUG] exists: {exists}")
                 if exists:
                     return {'number': phone_number, 'status': 'valid', 'emoji': '✅'}
                 else:
                     return {'number': phone_number, 'status': 'invalid', 'emoji': '⛔️'}
-        return {'number': phone_number, 'status': 'error', 'emoji': '⏳'}
+            else:
+                print(f"[DEBUG] No results or unexpected format")
+                return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': 'No results in response'}
+        
+        elif response.status_code == 401:
+            print(f"[DEBUG] Unauthorized - Invalid API Key")
+            return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': 'Invalid API Key'}
+        elif response.status_code == 404:
+            print(f"[DEBUG] Not Found - Instance not found")
+            return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': 'Instance not found'}
+        else:
+            print(f"[DEBUG] HTTP Error: {response.status_code}")
+            return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': f'HTTP {response.status_code}'}
+            
+    except requests.exceptions.Timeout:
+        print(f"[DEBUG] Timeout for number: {phone_number}")
+        return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': 'Timeout'}
+    except requests.exceptions.ConnectionError as e:
+        print(f"[DEBUG] Connection Error: {e}")
+        return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': 'Connection failed'}
     except Exception as e:
+        print(f"[DEBUG] Exception: {e}")
         return {'number': phone_number, 'status': 'error', 'emoji': '⏳', 'error': str(e)}
 
 
