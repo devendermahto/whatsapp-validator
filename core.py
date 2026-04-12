@@ -64,12 +64,12 @@ def init_db():
 def normalize_number(phone, country_code):
     """
     Normalize phone number for Evolution API.
-    Evolution API expects: just the number without country code prefix (e.g., 918826682082)
     
-    Input: 8826682082 (9 digits) with country_code=91
-    Output: 918826682082 (add country code, 11 digits - NOT stripped!)
+    Input examples:
+    - 8826682082 (10 digits) + country_code=91 -> 918826682082 (12 digits)
+    - 918826682082 (12 digits) + country_code=91 -> 918826682082 (12 digits - already has prefix)
     
-    The stripping was wrong - Evolution API actually ACCEPTS numbers with country code!
+    Evolution API works with both formats (with or without country code).
     """
     digits = re.sub(r'\D', '', phone)
     
@@ -82,16 +82,16 @@ def normalize_number(phone, country_code):
         if first_two in ['91', '1', '44', '92', '971', '966', '20', '234', '254', '880', '973', '965', '968', '212']:
             return digits, 'skipped'
     
-    # If 10 digits, add country code prefix
+    # If 10 digits (like 8826682082), add country code prefix to make it 12 digits
     if len(digits) == 10:
         return country_code + digits, 'valid_format'
     
-    # If 9 digits (like 8826682082), add country code
+    # If 9 digits, add country code to make it 11 digits
     if len(digits) == 9:
         return country_code + digits, 'valid_format'
     
-    # If already has country code (11 digits starting with 91)
-    if len(digits) == 11 and digits.startswith(country_code):
+    # If already has country code (11-12 digits starting with 91)
+    if len(digits) >= 11 and digits.startswith(country_code):
         return digits, 'valid_format'
     
     # For other lengths, return as-is
