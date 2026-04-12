@@ -63,40 +63,39 @@ def init_db():
 
 def normalize_number(phone, country_code):
     """
-    Normalize phone number based on selected country code.
-    Returns (normalized_number, status)
-    - status: 'valid_format' | 'skipped' | 'error'
-    
+    Normalize phone number for Evolution API.
     Evolution API expects: just the number without country code prefix (e.g., 918826682082)
+    
+    Input: 8826682082 (9 digits) with country_code=91
+    Output: 918826682082 (add country code, 11 digits - NOT stripped!)
+    
+    The stripping was wrong - Evolution API actually ACCEPTS numbers with country code!
     """
     digits = re.sub(r'\D', '', phone)
     
     if not digits:
         return phone, 'error'
     
-    # If already has country code prefix, remove it
-    if digits.startswith(country_code):
-        digits = digits[len(country_code):]
-    
-    # If has different country code (more than 10 digits and not starting with our code)
+    # If has different country code (more than 10 digits)
     if len(digits) > 10:
         first_two = digits[:2]
         if first_two in ['91', '1', '44', '92', '971', '966', '20', '234', '254', '880', '973', '965', '968', '212']:
             return digits, 'skipped'
     
-    # For 8-12 digit numbers, strip country code and return just the number
-    # Evolution API wants format like: 918826682082 (without + or 91 prefix)
-    if len(digits) >= 8 and len(digits) <= 12:
-        # Strip country code if present
-        if len(digits) == 12 and digits.startswith('91'):
-            return digits[2:], 'valid_format'
-        elif len(digits) == 11 and digits.startswith('1'):
-            return digits[1:], 'valid_format'
-        elif len(digits) == 10:
-            return digits, 'valid_format'
+    # If 10 digits, add country code prefix
+    if len(digits) == 10:
+        return country_code + digits, 'valid_format'
+    
+    # If 9 digits (like 8826682082), add country code
+    if len(digits) == 9:
+        return country_code + digits, 'valid_format'
+    
+    # If already has country code (11 digits starting with 91)
+    if len(digits) == 11 and digits.startswith(country_code):
         return digits, 'valid_format'
     
-    return digits, 'error'
+    # For other lengths, return as-is
+    return digits, 'valid_format'
 
 
 def get_api_credentials(user_id=1):
