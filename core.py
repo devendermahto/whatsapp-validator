@@ -79,9 +79,9 @@ def normalize_number(phone, country_code):
         first_two = digits[:2]
         if first_two in ['91', '1', '44', '92', '971', '966', '20', '234', '254', '880', '973', '965', '968', '973', '212']:
             return digits, 'skipped'
-        return digits, 'error'
+        return digits, 'valid_format'
     
-    if len(digits) == 10:
+    if len(digits) >= 8 and len(digits) <= 10:
         return country_code + digits, 'valid_format'
     
     return digits, 'error'

