@@ -66,23 +66,35 @@ def normalize_number(phone, country_code):
     Normalize phone number based on selected country code.
     Returns (normalized_number, status)
     - status: 'valid_format' | 'skipped' | 'error'
+    
+    Evolution API expects: just the number without country code prefix (e.g., 918826682082)
     """
     digits = re.sub(r'\D', '', phone)
     
     if not digits:
         return phone, 'error'
     
+    # If already has country code prefix, remove it
     if digits.startswith(country_code):
-        return digits, 'valid_format'
+        digits = digits[len(country_code):]
     
+    # If has different country code (more than 10 digits and not starting with our code)
     if len(digits) > 10:
         first_two = digits[:2]
-        if first_two in ['91', '1', '44', '92', '971', '966', '20', '234', '254', '880', '973', '965', '968', '973', '212']:
+        if first_two in ['91', '1', '44', '92', '971', '966', '20', '234', '254', '880', '973', '965', '968', '212']:
             return digits, 'skipped'
-        return digits, 'valid_format'
     
-    if len(digits) >= 8 and len(digits) <= 10:
-        return country_code + digits, 'valid_format'
+    # For 8-12 digit numbers, strip country code and return just the number
+    # Evolution API wants format like: 918826682082 (without + or 91 prefix)
+    if len(digits) >= 8 and len(digits) <= 12:
+        # Strip country code if present
+        if len(digits) == 12 and digits.startswith('91'):
+            return digits[2:], 'valid_format'
+        elif len(digits) == 11 and digits.startswith('1'):
+            return digits[1:], 'valid_format'
+        elif len(digits) == 10:
+            return digits, 'valid_format'
+        return digits, 'valid_format'
     
     return digits, 'error'
 
